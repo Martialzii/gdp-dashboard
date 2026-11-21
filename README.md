@@ -1,19 +1,37 @@
 # :earth_americas: GDP dashboard template
 
-A simple Streamlit app showing the GDP of different countries in the world.
+A simple GDP dashboard with Python, TypeScript, and Go implementations. Each version reads the shared World Bank dataset in `data/gdp_data.csv`.
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://gdp-dashboard-template.streamlit.app/)
 
-### How to run it on your own machine
+## Python
 
-1. Install the requirements
+Install the requirements and start Streamlit:
 
-   ```
-   $ pip install -r requirements.txt
-   ```
+```sh
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
 
-2. Run the app
+## TypeScript / JavaScript
 
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+Requires Node.js 18 or newer. From the repository root:
+
+```sh
+cd typescript-dashboard
+npm install
+npm run build
+npm start
+```
+
+Open [http://localhost:3000](http://localhost:3000). Set `PORT` to use a different port.
+
+## Go
+
+Requires Go 1.21 or newer. From the repository root:
+
+```sh
+go run ./go-dashboard
+```
+
+Open [http://localhost:8080](http://localhost:8080). Set `PORT` to use a different port or pass `-data path/to/gdp_data.csv` to load a different CSV file.

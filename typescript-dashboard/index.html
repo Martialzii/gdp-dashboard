@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f7fb">
+    <title>GDP dashboard</title>
+    <style>
+      :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #172033; background: #f5f7fb; font-synthesis: none; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { max-width: 1160px; margin: 0 auto; padding: 40px 24px 64px; }
+      h1 { margin: 0; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.04em; }
+      .intro { color: #647087; line-height: 1.6; margin: 12px 0 28px; max-width: 720px; }
+      .panel { background: white; border: 1px solid #e4e9f1; border-radius: 16px; padding: 22px; box-shadow: 0 8px 26px #16244308; }
+      .controls { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(260px, 1fr); gap: 24px; align-items: start; }
+      label, .control-title { font-weight: 650; font-size: .94rem; }
+      .years { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+      .year-field { display: grid; gap: 6px; color: #59667d; font-size: .84rem; }
+      input[type=range] { width: 100%; accent-color: #3764d8; }
+      select { width: 100%; min-height: 142px; margin-top: 10px; padding: 8px; border: 1px solid #d5dce7; border-radius: 9px; color: inherit; background: white; }
+      .hint { margin: 7px 0 0; color: #738097; font-size: .8rem; }
+      h2 { font-size: 1.2rem; margin: 32px 0 14px; letter-spacing: -.015em; }
+      .chart-wrap { overflow-x: auto; }
+      svg.chart { display: block; width: 100%; min-width: 560px; height: auto; }
+      .grid-line { stroke: #e8edf4; stroke-width: 1; }
+      .axis-label { fill: #758198; font-size: 12px; }
+      .series-line { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+      .legend { display: flex; gap: 12px 20px; flex-wrap: wrap; margin-top: 12px; color: #49556b; font-size: .85rem; }
+      .legend-item { display: inline-flex; gap: 7px; align-items: center; }
+      .swatch { width: 10px; height: 10px; border-radius: 50%; }
+      .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+      .metric { padding: 16px; border: 1px solid #e4e9f1; border-radius: 12px; }
+      .metric-code { color: #657187; font-size: .84rem; font-weight: 650; }
+      .metric-value { margin-top: 8px; font-size: 1.45rem; font-weight: 720; letter-spacing: -.03em; }
+      .metric-growth { margin-top: 4px; color: #18835b; font-size: .83rem; }
+      .metric-growth.na { color: #78849a; }
+      .empty { color: #758198; text-align: center; padding: 44px 12px; }
+      .error { color: #a52e38; background: #fff0f0; border-radius: 10px; padding: 14px; }
+      @media (max-width: 680px) { main { padding: 28px 16px 48px; } .controls { grid-template-columns: 1fr; } .panel { padding: 17px; } }
+    </style>
+    <script type="module" src="/dashboard.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>🌍 GDP dashboard</h1>
+      <p class="intro">Explore GDP (current US$) from the <a href="https://data.worldbank.org/">World Bank Open Data</a>. Data spans 1960–2022; some countries have missing years.</p>
+      <div id="status" role="status" aria-live="polite">Loading GDP data…</div>
+      <section id="dashboard" hidden>
+        <div class="panel controls">
+          <div>
+            <div class="control-title">Years</div>
+            <div class="years">
+              <label class="year-field" for="from-year">From <output id="from-value"></output><input id="from-year" type="range"></label>
+              <label class="year-field" for="to-year">To <output id="to-value"></output><input id="to-year" type="range"></label>
+            </div>
+          </div>
+          <div>
+            <label for="countries">Countries</label>
+            <select id="countries" multiple aria-describedby="country-hint"></select>
+            <p class="hint" id="country-hint">Use Ctrl (Windows/Linux) or ⌘ (Mac) to select multiple countries.</p>
+          </div>
+        </div>
+        <h2>GDP over time</h2>
+        <div class="panel">
+          <div id="chart" class="chart-wrap"></div>
+          <div id="legend" class="legend"></div>
+        </div>
+        <h2 id="metrics-heading"></h2>
+        <div id="metrics" class="metrics"></div>
+      </section>
+    </main>
+  </body>
+</html>

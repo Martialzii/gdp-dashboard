@@ -136,6 +136,10 @@ venv.bak/
 .spyderproject
 .spyproject
 
+# JavaScript / TypeScript
+node_modules/
+typescript-dashboard/dist/
+
 # Rope project settings
 .ropeproject
 
