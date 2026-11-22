@@ -46,6 +46,19 @@ type metric struct {
 	Growth string
 }
 
+type rankingRow struct {
+	Rank  int
+	Code  string
+	Name  string
+	Value string
+}
+
+type annualGrowthRow struct {
+	Code   string
+	Name   string
+	Growth string
+}
+
 type gridLine struct {
 	Y     float64
 	Label string
@@ -67,6 +80,8 @@ type pageData struct {
 	Grid       []gridLine
 	YearLabels []yearLabel
 	Empty      bool
+	Rankings   []rankingRow
+	GrowthRows []annualGrowthRow
 }
 
 const pageTemplate = `<!doctype html>
@@ -91,6 +106,9 @@ const pageTemplate = `<!doctype html>
     .swatch{width:10px;height:10px;border-radius:50%}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
     .metric{padding:16px;border:1px solid #e4e9f1;border-radius:12px}.metric-code{color:#657187;font-size:.84rem;font-weight:650}
     .metric-value{margin-top:8px;font-size:1.45rem;font-weight:720;letter-spacing:-.03em}.metric-growth{margin-top:4px;color:#18835b;font-size:.83rem}
+    .actions{display:flex;justify-content:flex-end;margin:18px 0 0}.export-button{display:inline-block;border:0;border-radius:8px;background:#3764d8;color:white;padding:10px 15px;font:inherit;font-weight:650;text-decoration:none}
+    .two-column{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 12px;border-bottom:1px solid #edf1f6;text-align:left}th{color:#657187;font-size:.82rem}td.numeric,th.numeric{text-align:right;font-variant-numeric:tabular-nums}.missing{color:#78849a}
     .empty{color:#758198;text-align:center;padding:44px 12px}@media(max-width:680px){main{padding:28px 16px 48px}.controls{grid-template-columns:1fr}.panel{padding:17px}}
   </style>
 </head>
@@ -123,6 +141,15 @@ const pageTemplate = `<!doctype html>
   <h2>GDP in {{.To}}</h2><div class="metrics">{{range .Metrics}}
     <article class="metric"><div class="metric-code">{{.Code}} GDP</div><div class="metric-value">{{.Value}}</div><div class="metric-growth">{{.Growth}}</div></article>
   {{end}}</div>
+  <div class="actions"><a class="export-button" href="/export.csv?from={{.From}}&to={{.To}}{{range .Countries}}{{if .Selected}}&amp;country={{.Code}}{{end}}{{end}}">Export visible data as CSV</a></div>
+  <div class="two-column">
+    <section><h2>GDP rankings in {{.To}}</h2><div class="panel"><table><thead><tr><th>Rank</th><th>Country</th><th class="numeric">GDP</th></tr></thead><tbody>
+      {{range .Rankings}}<tr><td>{{.Rank}}</td><td>{{.Code}} — {{.Name}}</td><td class="numeric">{{.Value}}</td></tr>{{else}}<tr><td colspan="3" class="missing">No GDP values are available for this year.</td></tr>{{end}}
+    </tbody></table></div></section>
+    <section><h2>Annual GDP growth for {{.To}}</h2><div class="panel"><table><thead><tr><th>Country</th><th class="numeric">Growth</th></tr></thead><tbody>
+      {{range .GrowthRows}}<tr><td>{{.Code}} — {{.Name}}</td><td class="numeric {{if eq .Growth "Unavailable"}}missing{{end}}">{{.Growth}}</td></tr>{{else}}<tr><td colspan="2" class="missing">Select at least one country.</td></tr>{{end}}
+    </tbody></table></div></section>
+  </div>
 </main></body></html>`
 
 func loadDataset(source io.Reader) (*Dataset, error) {
@@ -252,6 +279,8 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		From: from, To: to, MinYear: minimum, MaxYear: maximum,
 		Countries: make([]countryOption, 0, len(dataset.Countries)),
 		Metrics:   make([]metric, 0, len(selected)),
+		Rankings:  make([]rankingRow, 0, len(selected)),
+		GrowthRows: make([]annualGrowthRow, 0, len(selected)),
 	}
 	for _, country := range dataset.Countries {
 		page.Countries = append(page.Countries, countryOption{
@@ -333,6 +362,47 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 			page.Metrics = append(page.Metrics, metric{Code: code, Value: valueLabel, Growth: "Growth unavailable"})
 		}
 	}
+
+	ranked := make([]struct {
+		code  string
+		name  string
+		value float64
+	}, 0, len(selected))
+	for _, code := range selected {
+		country := dataset.ByCode[code]
+		if value, exists := country.GDP[to]; exists {
+			ranked = append(ranked, struct {
+				code  string
+				name  string
+				value float64
+			}{code: code, name: country.Name, value: value})
+		}
+	}
+	sort.Slice(ranked, func(i, j int) bool {
+		return ranked[i].value > ranked[j].value
+	})
+	for index, entry := range ranked {
+		page.Rankings = append(page.Rankings, rankingRow{
+			Rank: index + 1,
+			Code: entry.code,
+			Name: entry.name,
+			Value: "$" + strconv.FormatFloat(entry.value/1e9, 'f', 0, 64) + "B",
+		})
+	}
+	for _, code := range selected {
+		country := dataset.ByCode[code]
+		growth := "Unavailable"
+		current, hasCurrent := country.GDP[to]
+		previous, hasPrevious := country.GDP[to-1]
+		if hasCurrent && hasPrevious && previous != 0 {
+			growth = fmt.Sprintf("%.2f%%", (current/previous-1)*100)
+		}
+		page.GrowthRows = append(page.GrowthRows, annualGrowthRow{
+			Code: code,
+			Name: country.Name,
+			Growth: growth,
+		})
+	}
 	return page
 }
 
@@ -378,6 +448,34 @@ func run() error {
 		response.Header().Set("X-Content-Type-Options", "nosniff")
 		if err := tmpl.Execute(response, buildPage(dataset, request)); err != nil {
 			log.Printf("render dashboard: %v", err)
+		}
+	})
+	mux.HandleFunc("/export.csv", func(response http.ResponseWriter, request *http.Request) {
+		minimum, maximum := dataset.Years[0], dataset.Years[len(dataset.Years)-1]
+		from := boundedYear(request.URL.Query().Get("from"), minimum, minimum, maximum)
+		to := boundedYear(request.URL.Query().Get("to"), maximum, minimum, maximum)
+		if from > to {
+			from = to
+		}
+		selected := selectedCodes(request.URL.Query()["country"], dataset)
+		response.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"gdp-%d-%d.csv\"", from, to))
+		response.Header().Set("X-Content-Type-Options", "nosniff")
+		writer := csv.NewWriter(response)
+		_ = writer.Write([]string{"Country Name", "Country Code", "Year", "GDP"})
+		for _, code := range selected {
+			country := dataset.ByCode[code]
+			for year := from; year <= to; year++ {
+				value := ""
+				if gdp, exists := country.GDP[year]; exists {
+					value = strconv.FormatFloat(gdp, 'f', -1, 64)
+				}
+				_ = writer.Write([]string{country.Name, country.Code, strconv.Itoa(year), value})
+			}
+		}
+		writer.Flush()
+		if err := writer.Error(); err != nil {
+			log.Printf("write CSV export: %v", err)
 		}
 	})
 	address := "127.0.0.1:" + port

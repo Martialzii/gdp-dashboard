@@ -54,3 +54,29 @@ France,FRA,3000000000,6000000000
 		t.Fatalf("an empty country selection should remain empty: %+v", page)
 	}
 }
+
+func TestBuildPageAddsAnnualGrowthAndRankings(t *testing.T) {
+	dataset, err := loadDataset(strings.NewReader(`Country Name,Country Code,1960,1961,1962
+Germany,DEU,100,110,0
+France,FRA,200,220,330
+Missing Economy,MSE,,100,
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest("GET", "/?from=1960&to=1962&country=DEU&country=FRA&country=MSE", nil)
+	page := buildPage(dataset, request)
+	if len(page.Rankings) != 2 {
+		t.Fatalf("rankings should omit missing GDP values, got %+v", page.Rankings)
+	}
+	if page.Rankings[0].Code != "FRA" || page.Rankings[1].Code != "DEU" {
+		t.Fatalf("unexpected ranking order: %+v", page.Rankings)
+	}
+	growthByCode := make(map[string]string)
+	for _, row := range page.GrowthRows {
+		growthByCode[row.Code] = row.Growth
+	}
+	if growthByCode["FRA"] != "50.00%" || growthByCode["DEU"] != "-100.00%" || growthByCode["MSE"] != "Unavailable" {
+		t.Fatalf("unexpected annual growth: %+v", growthByCode)
+	}
+}

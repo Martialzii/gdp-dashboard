@@ -226,14 +226,113 @@ function renderMetrics(countries: Country[], fromYear: number, toYear: number): 
   }
 }
 
+function formatGDP(value: number | undefined): string {
+  if (value === undefined) return "N/A";
+  return `$${(value / 1e9).toLocaleString(undefined, { maximumFractionDigits: 0 })}B`;
+}
+
+function renderRankings(countries: Country[], toYear: number): void {
+  const root = element<HTMLTableSectionElement>("rankings");
+  root.replaceChildren();
+  element<HTMLHeadingElement>("ranking-heading").textContent = `GDP rankings in ${toYear}`;
+  const ranked = countries
+    .map((country) => ({ country, value: country.gdpByYear.get(toYear) }))
+    .filter((entry): entry is { country: Country; value: number } => entry.value !== undefined)
+    .sort((left, right) => right.value - left.value);
+
+  if (ranked.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 3;
+    cell.className = "missing";
+    cell.textContent = "No GDP values are available for this year.";
+    row.append(cell);
+    root.append(row);
+    return;
+  }
+
+  ranked.forEach(({ country, value }, index) => {
+    const row = document.createElement("tr");
+    const rank = document.createElement("td");
+    rank.textContent = String(index + 1);
+    const code = document.createElement("td");
+    code.textContent = `${country.code} — ${country.name}`;
+    const gdp = document.createElement("td");
+    gdp.className = "numeric";
+    gdp.textContent = formatGDP(value);
+    row.append(rank, code, gdp);
+    root.append(row);
+  });
+}
+
+function renderAnnualGrowth(countries: Country[], toYear: number): void {
+  const root = element<HTMLTableSectionElement>("annual-growth");
+  root.replaceChildren();
+  element<HTMLHeadingElement>("growth-heading").textContent = `Annual GDP growth for ${toYear}`;
+
+  if (countries.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 2;
+    cell.className = "missing";
+    cell.textContent = "Select at least one country.";
+    row.append(cell);
+    root.append(row);
+    return;
+  }
+
+  countries.forEach((country) => {
+    const current = country.gdpByYear.get(toYear);
+    const previous = country.gdpByYear.get(toYear - 1);
+    const row = document.createElement("tr");
+    const code = document.createElement("td");
+    code.textContent = `${country.code} — ${country.name}`;
+    const growth = document.createElement("td");
+    growth.className = "numeric";
+    if (current === undefined || previous === undefined || previous === 0) {
+      growth.className += " missing";
+      growth.textContent = "Unavailable";
+    } else {
+      growth.textContent = `${((current / previous - 1) * 100).toFixed(2)}%`;
+    }
+    row.append(code, growth);
+    root.append(row);
+  });
+}
+
+function exportVisibleCSV(countries: Country[], fromYear: number, toYear: number): void {
+  const escapeCSV = (value: string | number): string => {
+    const text = String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  const rows: Array<Array<string | number>> = [["Country Name", "Country Code", "Year", "GDP"]];
+  for (const country of countries) {
+    for (let year = fromYear; year <= toYear; year += 1) {
+      const gdp = country.gdpByYear.get(year);
+      rows.push([country.name, country.code, year, gdp ?? ""]);
+    }
+  }
+  const csv = rows.map((row) => row.map(escapeCSV).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `gdp-${fromYear}-${toYear}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function initialize(countries: Country[], years: number[]): void {
   const from = element<HTMLInputElement>("from-year");
   const to = element<HTMLInputElement>("to-year");
   const select = element<HTMLSelectElement>("countries");
-  const fromOutput = element<HTMLOutputElement>("from-value");
-  const toOutput = element<HTMLOutputElement>("to-value");
+  const exportButton = element<HTMLButtonElement>("export-csv");
   const minimum = Math.min(...years);
   const maximum = Math.max(...years);
+  let visibleCountries: Country[] = [];
+  let visibleFromYear = minimum;
+  let visibleToYear = maximum;
+  const fromOutput = element<HTMLOutputElement>("from-value");
+  const toOutput = element<HTMLOutputElement>("to-value");
   for (const input of [from, to]) {
     input.min = String(minimum);
     input.max = String(maximum);
@@ -262,12 +361,19 @@ function initialize(countries: Country[], years: number[]): void {
     toOutput.value = String(toYear);
     const selected = new Set(Array.from(select.selectedOptions, (option) => option.value));
     const chosen = countries.filter(({ code }) => selected.has(code));
+    visibleCountries = chosen;
+    visibleFromYear = fromYear;
+    visibleToYear = toYear;
     renderChart(chosen, fromYear, toYear);
     renderMetrics(chosen, fromYear, toYear);
+    renderRankings(chosen, toYear);
+    renderAnnualGrowth(chosen, toYear);
+    exportButton.disabled = chosen.length === 0;
   };
   from.addEventListener("input", update);
   to.addEventListener("input", update);
   select.addEventListener("change", update);
+  exportButton.addEventListener("click", () => exportVisibleCSV(visibleCountries, visibleFromYear, visibleToYear));
   update();
   element<HTMLDivElement>("dashboard").hidden = false;
 }

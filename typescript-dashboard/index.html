@@ -35,6 +35,15 @@
       .metric-value { margin-top: 8px; font-size: 1.45rem; font-weight: 720; letter-spacing: -.03em; }
       .metric-growth { margin-top: 4px; color: #18835b; font-size: .83rem; }
       .metric-growth.na { color: #78849a; }
+      .actions { display: flex; justify-content: flex-end; margin: 18px 0 0; }
+      .export-button { border: 0; border-radius: 8px; background: #3764d8; color: white; padding: 10px 15px; font: inherit; font-weight: 650; cursor: pointer; }
+      .export-button:disabled { cursor: not-allowed; opacity: .55; }
+      .two-column { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 10px 12px; border-bottom: 1px solid #edf1f6; text-align: left; }
+      th { color: #657187; font-size: .82rem; }
+      td.numeric, th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
+      .missing { color: #78849a; }
       .empty { color: #758198; text-align: center; padding: 44px 12px; }
       .error { color: #a52e38; background: #fff0f0; border-radius: 10px; padding: 14px; }
       @media (max-width: 680px) { main { padding: 28px 16px 48px; } .controls { grid-template-columns: 1fr; } .panel { padding: 17px; } }
@@ -68,6 +77,19 @@
         </div>
         <h2 id="metrics-heading"></h2>
         <div id="metrics" class="metrics"></div>
+        <div class="actions">
+          <button id="export-csv" class="export-button" type="button">Export visible data as CSV</button>
+        </div>
+        <div class="two-column">
+          <section>
+            <h2 id="ranking-heading">GDP rankings</h2>
+            <div class="panel"><table><thead><tr><th>Rank</th><th>Country</th><th class="numeric">GDP</th></tr></thead><tbody id="rankings"></tbody></table></div>
+          </section>
+          <section>
+            <h2 id="growth-heading">Annual GDP growth</h2>
+            <div class="panel"><table><thead><tr><th>Country</th><th class="numeric">Growth</th></tr></thead><tbody id="annual-growth"></tbody></table></div>
+          </section>
+        </div>
       </section>
     </main>
   </body>
