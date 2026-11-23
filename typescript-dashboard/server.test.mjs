@@ -67,4 +67,12 @@ test("serves cached dashboard assets and streams the dataset", async (t) => {
     })).status,
     304,
   );
+  const indicators = await fetch(`${base}/data/world_bank_indicators.json`);
+  assert.equal(indicators.status, 200);
+  assert.match(indicators.headers.get("content-type"), /application\/json/);
+  assert.ok((await indicators.json()).countries.length > 0);
+  const map = await fetch(`${base}/data/world_countries.geojson`);
+  assert.equal(map.status, 200);
+  assert.match(map.headers.get("content-type"), /application\/geo\+json/);
+  assert.ok((await map.json()).features.length >= 100);
 });

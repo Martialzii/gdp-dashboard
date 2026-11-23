@@ -26,6 +26,16 @@ const assets = new Map([
   ["/", await loadAsset(path.join(root, "index.html"), "text/html; charset=utf-8")],
   ["/dashboard.js", await loadAsset(path.join(root, "dist", "dashboard.js"), "text/javascript; charset=utf-8")],
 ]);
+for (const [url, filename, contentType] of [
+  ["/data/world_bank_indicators.json", "world_bank_indicators.json", "application/json; charset=utf-8"],
+  ["/data/world_countries.geojson", "world_countries.geojson", "application/geo+json; charset=utf-8"],
+]) {
+  try {
+    assets.set(url, await loadAsset(path.join(root, "..", "data", filename), contentType));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+}
 const csvInfo = await stat(csvPath);
 const csvEtag = `W/"${csvInfo.size.toString(16)}-${Math.trunc(csvInfo.mtimeMs).toString(16)}"`;
 

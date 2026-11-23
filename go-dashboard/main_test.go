@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -153,5 +154,43 @@ Zero GDP,ZER,0,0
 	page := buildPage(dataset, request)
 	if page.Empty || len(page.Rankings) != 1 || page.Metrics[0].Value != "$0B" {
 		t.Fatalf("zero GDP should remain a valid observation: %+v", page)
+	}
+}
+
+func TestIndicatorSnapshotAddsPerCapitaMapAndGroupComparisons(t *testing.T) {
+	dataset, err := loadDataset(strings.NewReader(`Country Name,Country Code,1960,1961
+Example,EXM,100,200
+Second,SEC,300,400
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot := `{"countries":[
+		{"code":"EXM","region":"East Asia","incomeLevel":"High income","gdpPerCapita":{"1960":5,"1961":10},"realGDP":{"1960":50,"1961":100}},
+		{"code":"SEC","region":"East Asia","incomeLevel":"High income","gdpPerCapita":{"1960":15,"1961":20},"realGDP":{"1960":150,"1961":200}}
+	]}`
+	var boundaries strings.Builder
+	boundaries.WriteString(`{"type":"FeatureCollection","features":[`)
+	for index := 0; index < 100; index++ {
+		if index > 0 {
+			boundaries.WriteByte(',')
+		}
+		code := fmt.Sprintf("C%02d", index)
+		if index == 0 {
+			code = "EXM"
+		}
+		fmt.Fprintf(&boundaries, `{"type":"Feature","properties":{"ISO_A3_EH":%q,"ADMIN":"Test"},"geometry":{"type":"Polygon","coordinates":[[[0,0],[1,0],[1,1],[0,0]]]}}`, code)
+	}
+	boundaries.WriteString(`]}`)
+	if err := loadIndicatorData(dataset, strings.NewReader(snapshot), strings.NewReader(boundaries.String())); err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest("GET", "/?from=1960&to=1961&country=EXM&country=SEC&indicator=gdpPerCapita", nil)
+	page := buildPage(dataset, request)
+	if page.IndicatorLabel != "GDP per capita" || len(page.Rankings) != 2 || page.Rankings[0].Value != "$20" {
+		t.Fatalf("unexpected indicator rankings: %+v", page)
+	}
+	if len(page.MapCountries) != 100 || len(page.Comparisons) != 2 || page.Comparisons[0].Count != 2 {
+		t.Fatalf("indicator data was not used for map and group comparisons: map=%d groups=%+v", len(page.MapCountries), page.Comparisons)
 	}
 }

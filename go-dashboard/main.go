@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -20,9 +21,13 @@ import (
 )
 
 type Country struct {
-	Code string
-	Name string
-	GDP  []float64
+	Code         string
+	Name         string
+	GDP          []float64
+	GDPPerCapita []float64
+	RealGDP      []float64
+	Region       string
+	IncomeLevel  string
 }
 
 type Dataset struct {
@@ -30,6 +35,38 @@ type Dataset struct {
 	ByCode    map[string]Country
 	Years     []int
 	YearIndex map[int]int
+	Map       []mapCountry
+}
+
+type indicatorCountry struct {
+	Code         string             `json:"code"`
+	Region       string             `json:"region"`
+	IncomeLevel  string             `json:"incomeLevel"`
+	GDPPerCapita map[string]float64 `json:"gdpPerCapita"`
+	RealGDP      map[string]float64 `json:"realGDP"`
+}
+
+type indicatorSnapshot struct {
+	Countries []indicatorCountry `json:"countries"`
+}
+
+type geoCollection struct {
+	Features []geoFeature `json:"features"`
+}
+
+type geoFeature struct {
+	Properties map[string]any `json:"properties"`
+	Geometry   struct {
+		Type        string          `json:"type"`
+		Coordinates json.RawMessage `json:"coordinates"`
+	} `json:"geometry"`
+}
+
+type mapCountry struct {
+	Code  string
+	Path  string
+	Fill  string
+	Title string
 }
 
 type chartSeries struct {
@@ -85,18 +122,28 @@ type yearLabel struct {
 }
 
 type pageData struct {
-	From       int
-	To         int
-	MinYear    int
-	MaxYear    int
-	Countries  []countryOption
-	Series     []chartSeries
-	Metrics    []metric
-	Grid       []gridLine
-	YearLabels []yearLabel
-	Empty      bool
-	Rankings   []rankingRow
-	GrowthRows []annualGrowthRow
+	From           int
+	To             int
+	MinYear        int
+	MaxYear        int
+	Countries      []countryOption
+	Series         []chartSeries
+	Metrics        []metric
+	Grid           []gridLine
+	YearLabels     []yearLabel
+	Empty          bool
+	Rankings       []rankingRow
+	GrowthRows     []annualGrowthRow
+	Indicator      string
+	IndicatorLabel string
+	MapCountries   []mapCountry
+	Comparisons    []comparisonRow
+}
+
+type comparisonRow struct {
+	Group   string
+	Average string
+	Count   int
 }
 
 type cachedPage struct {
@@ -174,7 +221,7 @@ const pageTemplate = `<!doctype html>
     *{box-sizing:border-box}body{margin:0}main{max-width:1160px;margin:0 auto;padding:40px 24px 64px}
     h1{margin:0;font-size:clamp(2rem,5vw,3rem);letter-spacing:-.04em}.intro{color:#647087;line-height:1.6;margin:12px 0 28px;max-width:720px}
     .panel{background:#fff;border:1px solid #e4e9f1;border-radius:16px;padding:22px;box-shadow:0 8px 26px #16244308}
-    .controls{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+    .controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;align-items:start}
     label,.control-title{font-weight:650;font-size:.94rem}.years{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
     .year-field{display:grid;gap:6px;color:#59667d;font-size:.84rem}input[type=number]{width:100%;padding:8px;border:1px solid #d5dce7;border-radius:8px}
     select{width:100%;min-height:142px;margin-top:10px;padding:8px;border:1px solid #d5dce7;border-radius:9px;color:inherit;background:#fff}
@@ -193,8 +240,13 @@ const pageTemplate = `<!doctype html>
 </head>
 <body><main>
   <h1>🌍 GDP dashboard</h1>
-  <p class="intro">Explore GDP (current US$) from the <a href="https://data.worldbank.org/">World Bank Open Data</a>. Data spans {{.MinYear}}–{{.MaxYear}}; some countries have missing years.</p>
+  <p class="intro">Explore economic indicators from <a href="https://data.worldbank.org/">World Bank Open Data</a>. Data spans {{.MinYear}}–{{.MaxYear}}; some countries have missing years.</p>
   <form method="get" class="panel controls">
+    <div><label for="indicator">Indicator</label><select id="indicator" name="indicator">
+      <option value="gdp" {{if eq .Indicator "gdp"}}selected{{end}}>GDP (current US$)</option>
+      <option value="gdpPerCapita" {{if eq .Indicator "gdpPerCapita"}}selected{{end}}>GDP per capita (current US$)</option>
+      <option value="realGDP" {{if eq .Indicator "realGDP"}}selected{{end}}>Real GDP (constant 2015 US$)</option>
+    </select></div>
     <div><div class="control-title">Years</div><div class="years">
       <label class="year-field" for="from">From<input id="from" name="from" type="number" min="{{.MinYear}}" max="{{.MaxYear}}" value="{{.From}}"></label>
       <label class="year-field" for="to">To<input id="to" name="to" type="number" min="{{.MinYear}}" max="{{.MaxYear}}" value="{{.To}}"></label>
@@ -207,7 +259,7 @@ const pageTemplate = `<!doctype html>
       <button type="submit">Update dashboard</button>
     </div>
   </form>
-  <h2>GDP over time</h2><section class="panel chart-wrap">
+  <h2>{{.IndicatorLabel}} over time</h2><section class="panel chart-wrap">
     {{if .Empty}}<p class="empty">No GDP data is available for this selection.</p>{{else}}
     <svg viewBox="0 0 1000 390" role="img" aria-label="GDP by year from {{.From}} through {{.To}}">
       {{range .Grid}}<line class="grid-line" x1="76" x2="982" y1="{{.Y}}" y2="{{.Y}}"></line><text class="axis-label" x="66" y="{{add .Y 4}}" text-anchor="end">{{.Label}}</text>{{end}}
@@ -217,18 +269,25 @@ const pageTemplate = `<!doctype html>
     <div class="legend">{{range .Series}}<span class="legend-item"><span class="swatch" style="background:{{.Color}}" aria-hidden="true"></span>{{.Code}}</span>{{end}}</div>
     {{end}}
   </section>
-  <h2>GDP in {{.To}}</h2><div class="metrics">{{range .Metrics}}
-    <article class="metric"><div class="metric-code">{{.Code}} GDP</div><div class="metric-value">{{.Value}}</div><div class="metric-growth">{{.Growth}}</div></article>
+  <h2>{{.IndicatorLabel}} in {{.To}}</h2><div class="metrics">{{range .Metrics}}
+    <article class="metric"><div class="metric-code">{{.Code}} {{$.IndicatorLabel}}</div><div class="metric-value">{{.Value}}</div><div class="metric-growth">{{.Growth}}</div></article>
   {{end}}</div>
-  <div class="actions"><a class="export-button" href="/export.csv?from={{.From}}&to={{.To}}{{range .Countries}}{{if .Selected}}&amp;country={{.Code}}{{end}}{{end}}">Export visible data as CSV</a></div>
+  <div class="actions"><a class="export-button" href="/export.csv?from={{.From}}&to={{.To}}&amp;indicator={{.Indicator}}{{range .Countries}}{{if .Selected}}&amp;country={{.Code}}{{end}}{{end}}">Export visible data as CSV</a></div>
   <div class="two-column">
-    <section><h2>GDP rankings in {{.To}}</h2><div class="panel"><table><thead><tr><th>Rank</th><th>Country</th><th class="numeric">GDP</th></tr></thead><tbody>
+    <section><h2>{{.IndicatorLabel}} rankings in {{.To}}</h2><div class="panel"><table><thead><tr><th>Rank</th><th>Country</th><th class="numeric">Value</th></tr></thead><tbody>
       {{range .Rankings}}<tr><td>{{.Rank}}</td><td>{{.Code}} — {{.Name}}</td><td class="numeric">{{.Value}}</td></tr>{{else}}<tr><td colspan="3" class="missing">No GDP values are available for this year.</td></tr>{{end}}
     </tbody></table></div></section>
-    <section><h2>Annual GDP growth for {{.To}}</h2><div class="panel"><table><thead><tr><th>Country</th><th class="numeric">Growth</th></tr></thead><tbody>
+    <section><h2>Annual {{.IndicatorLabel}} growth for {{.To}}</h2><div class="panel"><table><thead><tr><th>Country</th><th class="numeric">Growth</th></tr></thead><tbody>
       {{range .GrowthRows}}<tr><td>{{.Code}} — {{.Name}}</td><td class="numeric {{if eq .Growth "Unavailable"}}missing{{end}}">{{.Growth}}</td></tr>{{else}}<tr><td colspan="2" class="missing">Select at least one country.</td></tr>{{end}}
     </tbody></table></div></section>
   </div>
+  <h2>World map: {{.IndicatorLabel}} in {{.To}}</h2><section class="panel chart-wrap"><svg viewBox="0 0 1000 500" role="img" aria-label="World map of {{.IndicatorLabel}} in {{.To}}">
+    {{range .MapCountries}}<path d="{{.Path}}" fill="{{.Fill}}" stroke="#fff" stroke-width="0.7"><title>{{.Title}}</title></path>{{else}}<text x="500" y="250" text-anchor="middle" fill="#758198">Run scripts/refresh-dashboard-data.mjs to load map and indicator data.</text>{{end}}
+  </svg><div class="legend"><span>Lower</span><span style="color:#6f9ed6">Middle</span><span style="color:#203f92">Higher</span><span style="color:#9aa3b0">No data</span><span>Values use quintile buckets.</span></div></section>
+  <h2>Region and income-group comparison</h2><p class="hint">Averages include countries with reported values for the selected indicator and year.</p>
+  <section class="panel"><table><thead><tr><th>Group</th><th class="numeric">Average</th><th class="numeric">Countries</th></tr></thead><tbody>
+    {{range .Comparisons}}<tr><td>{{.Group}}</td><td class="numeric">{{.Average}}</td><td class="numeric">{{.Count}}</td></tr>{{else}}<tr><td colspan="3" class="missing">No group values are available for this year.</td></tr>{{end}}
+  </tbody></table></section>
 </main></body></html>`
 
 func loadDataset(source io.Reader) (*Dataset, error) {
@@ -315,6 +374,156 @@ func loadDataset(source io.Reader) (*Dataset, error) {
 	return dataset, nil
 }
 
+func loadIndicatorData(dataset *Dataset, snapshotSource, mapSource io.Reader) error {
+	var snapshot indicatorSnapshot
+	if err := json.NewDecoder(snapshotSource).Decode(&snapshot); err != nil {
+		return fmt.Errorf("decode World Bank indicator snapshot: %w", err)
+	}
+	metadata := make(map[string]indicatorCountry, len(snapshot.Countries))
+	for _, entry := range snapshot.Countries {
+		metadata[entry.Code] = entry
+	}
+	for index := range dataset.Countries {
+		country := &dataset.Countries[index]
+		entry := metadata[country.Code]
+		country.GDPPerCapita = make([]float64, len(dataset.Years))
+		country.RealGDP = make([]float64, len(dataset.Years))
+		for yearIndex, year := range dataset.Years {
+			country.GDPPerCapita[yearIndex] = math.NaN()
+			country.RealGDP[yearIndex] = math.NaN()
+			if value, ok := entry.GDPPerCapita[strconv.Itoa(year)]; ok && !math.IsNaN(value) && !math.IsInf(value, 0) {
+				country.GDPPerCapita[yearIndex] = value
+			}
+			if value, ok := entry.RealGDP[strconv.Itoa(year)]; ok && !math.IsNaN(value) && !math.IsInf(value, 0) {
+				country.RealGDP[yearIndex] = value
+			}
+		}
+		country.Region, country.IncomeLevel = strings.TrimSpace(entry.Region), strings.TrimSpace(entry.IncomeLevel)
+		dataset.ByCode[country.Code] = *country
+	}
+	var boundaries geoCollection
+	if err := json.NewDecoder(mapSource).Decode(&boundaries); err != nil {
+		return fmt.Errorf("decode Natural Earth country boundaries: %w", err)
+	}
+	if len(boundaries.Features) < 100 {
+		return errors.New("Natural Earth country boundaries are incomplete")
+	}
+	dataset.Map = make([]mapCountry, 0, len(boundaries.Features))
+	for _, feature := range boundaries.Features {
+		code := geoProperty(feature, "ISO_A3_EH")
+		if code == "" || code == "-99" {
+			code = geoProperty(feature, "ADM0_A3")
+		}
+		if code == "" || code == "-99" {
+			code = geoProperty(feature, "ISO_A3")
+		}
+		if code == "" || code == "-99" || feature.Geometry.Type == "" {
+			continue
+		}
+		pathData, err := geoJSONPath(feature.Geometry.Coordinates)
+		if err != nil {
+			return fmt.Errorf("parse Natural Earth geometry for %s: %w", code, err)
+		}
+		dataset.Map = append(dataset.Map, mapCountry{
+			Code:  code,
+			Path:  pathData,
+			Title: geoProperty(feature, "ADMIN"),
+		})
+	}
+	if len(dataset.Map) == 0 {
+		return errors.New("Natural Earth country boundaries contain no usable country codes")
+	}
+	return nil
+}
+
+func geoProperty(feature geoFeature, key string) string {
+	value, _ := feature.Properties[key].(string)
+	return value
+}
+
+func geoJSONPath(raw json.RawMessage) (string, error) {
+	var coordinates any
+	if err := json.Unmarshal(raw, &coordinates); err != nil {
+		return "", err
+	}
+	var pathData strings.Builder
+	var visit func(any)
+	visit = func(value any) {
+		points, isArray := value.([]any)
+		if !isArray || len(points) == 0 {
+			return
+		}
+		if _, isCoordinate := points[0].(float64); isCoordinate {
+			return
+		}
+		if first, ok := points[0].([]any); ok && len(first) >= 2 {
+			if _, isCoordinate := first[0].(float64); isCoordinate {
+				for index, rawPoint := range points {
+					point, ok := rawPoint.([]any)
+					if !ok || len(point) < 2 {
+						continue
+					}
+					longitude, lonOK := point[0].(float64)
+					latitude, latOK := point[1].(float64)
+					if !lonOK || !latOK {
+						continue
+					}
+					x := (longitude + 180) / 360 * 1000
+					y := (90 - latitude) / 180 * 500
+					command := "L"
+					if index == 0 {
+						command = "M"
+					}
+					fmt.Fprintf(&pathData, "%s%.2f,%.2f", command, x, y)
+				}
+				pathData.WriteByte('Z')
+				return
+			}
+		}
+		for _, child := range points {
+			visit(child)
+		}
+	}
+	visit(coordinates)
+	if pathData.Len() == 0 {
+		return "", errors.New("empty coordinate path")
+	}
+	return pathData.String(), nil
+}
+
+func valueAt(dataset *Dataset, country Country, year int, indicator string) (float64, bool) {
+	if indicator == "gdpPerCapita" || indicator == "realGDP" {
+		values := country.GDPPerCapita
+		if indicator == "realGDP" {
+			values = country.RealGDP
+		}
+		index, exists := dataset.YearIndex[year]
+		if !exists || index >= len(values) || math.IsNaN(values[index]) || math.IsInf(values[index], 0) {
+			return 0, false
+		}
+		return values[index], true
+	}
+	return dataset.gdpAt(country, year)
+}
+
+func indicatorTitle(indicator string) string {
+	switch indicator {
+	case "gdpPerCapita":
+		return "GDP per capita"
+	case "realGDP":
+		return "Real GDP"
+	default:
+		return "GDP"
+	}
+}
+
+func formatValue(value float64, indicator string) string {
+	if indicator == "gdpPerCapita" {
+		return "$" + strconv.FormatFloat(value, 'f', 0, 64)
+	}
+	return "$" + strconv.FormatFloat(value/1e9, 'f', 0, 64) + "B"
+}
+
 func (dataset *Dataset) gdpAt(country Country, year int) (float64, bool) {
 	index, exists := dataset.YearIndex[year]
 	if !exists || index >= len(country.GDP) || math.IsNaN(country.GDP[index]) {
@@ -324,12 +533,16 @@ func (dataset *Dataset) gdpAt(country Country, year int) (float64, bool) {
 }
 
 func chartPoints(dataset *Dataset, country Country, from, to int) []chartPoint {
+	return chartPointsFor(dataset, country, from, to, "gdp")
+}
+
+func chartPointsFor(dataset *Dataset, country Country, from, to int, indicator string) []chartPoint {
 	const maximumPoints = 800
 	yearSpan := to - from + 1
 	if yearSpan <= maximumPoints {
 		points := make([]chartPoint, 0, yearSpan)
 		for year := from; year <= to; year++ {
-			if value, exists := dataset.gdpAt(country, year); exists {
+			if value, exists := valueAt(dataset, country, year, indicator); exists {
 				points = append(points, chartPoint{Year: year, Value: value})
 			}
 		}
@@ -342,7 +555,7 @@ func chartPoints(dataset *Dataset, country Country, from, to int) []chartPoint {
 	var first, last chartPoint
 	hasPoint := false
 	for year := from; year <= to; year++ {
-		value, exists := dataset.gdpAt(country, year)
+		value, exists := valueAt(dataset, country, year, indicator)
 		if !exists {
 			continue
 		}
@@ -434,6 +647,11 @@ func boundedYear(value string, fallback, minimum, maximum int) int {
 
 func buildPage(dataset *Dataset, request *http.Request) pageData {
 	minimum, maximum := dataset.Years[0], dataset.Years[len(dataset.Years)-1]
+	indicator := request.URL.Query().Get("indicator")
+	if indicator != "gdpPerCapita" && indicator != "realGDP" {
+		indicator = "gdp"
+	}
+	indicatorLabel := indicatorTitle(indicator)
 	from := boundedYear(request.URL.Query().Get("from"), minimum, minimum, maximum)
 	to := boundedYear(request.URL.Query().Get("to"), maximum, minimum, maximum)
 	if from > to {
@@ -452,6 +670,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 
 	page := pageData{
 		From: from, To: to, MinYear: minimum, MaxYear: maximum,
+		Indicator: indicator, IndicatorLabel: indicatorLabel,
 		Countries:  make([]countryOption, 0, len(dataset.Countries)),
 		Metrics:    make([]metric, 0, len(selected)),
 		Rankings:   make([]rankingRow, 0, len(selected)),
@@ -469,7 +688,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	hasGDP := false
 	for _, code := range selected {
 		for year := from; year <= to; year++ {
-			value, exists := dataset.gdpAt(dataset.ByCode[code], year)
+			value, exists := valueAt(dataset, dataset.ByCode[code], year, indicator)
 			if exists {
 				hasGDP = true
 				if value > maxGDP {
@@ -484,7 +703,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		for tick := 0; tick <= 4; tick++ {
 			page.Grid = append(page.Grid, gridLine{
 				Y:     top + plotHeight*float64(tick)/4,
-				Label: fmt.Sprintf("$%sB", strconv.FormatFloat(scaleGDP*float64(4-tick)/4/1e9, 'f', 1, 64)),
+				Label: formatValue(scaleGDP*float64(4-tick)/4, indicator),
 			})
 		}
 		span := maxInt(to-from, 1)
@@ -506,7 +725,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		palette := []string{"#3764d8", "#e05c42", "#14946b", "#9a56c4", "#da9b22", "#168eaa", "#d34d88", "#697b30"}
 		for index, code := range selected {
 			country := dataset.ByCode[code]
-			points := chartPoints(dataset, country, from, to)
+			points := chartPointsFor(dataset, country, from, to, indicator)
 			coordinates := make([]string, 0, len(points))
 			for _, point := range points {
 				x := left + float64(point.Year-from)/float64(span)*plotWidth
@@ -518,11 +737,11 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 					Code: code, Color: palette[index%len(palette)], Points: strings.Join(coordinates, " "),
 				})
 			}
-			current, hasCurrent := dataset.gdpAt(country, to)
-			initial, hasInitial := dataset.gdpAt(country, from)
+			current, hasCurrent := valueAt(dataset, country, to, indicator)
+			initial, hasInitial := valueAt(dataset, country, from, indicator)
 			valueLabel, growth := "N/A", "Growth unavailable"
 			if hasCurrent {
-				valueLabel = "$" + strconv.FormatFloat(current/1e9, 'f', 0, 64) + "B"
+				valueLabel = formatValue(current, indicator)
 			}
 			if hasCurrent && hasInitial && initial != 0 {
 				growth = fmt.Sprintf("%.2f× since %d", current/initial, from)
@@ -532,10 +751,10 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	} else {
 		for _, code := range selected {
 			country := dataset.ByCode[code]
-			current, hasCurrent := dataset.gdpAt(country, to)
+			current, hasCurrent := valueAt(dataset, country, to, indicator)
 			valueLabel := "N/A"
 			if hasCurrent {
-				valueLabel = "$" + strconv.FormatFloat(current/1e9, 'f', 0, 64) + "B"
+				valueLabel = formatValue(current, indicator)
 			}
 			page.Metrics = append(page.Metrics, metric{Code: code, Value: valueLabel, Growth: "Growth unavailable"})
 		}
@@ -548,7 +767,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	}, 0, len(selected))
 	for _, code := range selected {
 		country := dataset.ByCode[code]
-		if value, exists := dataset.gdpAt(country, to); exists {
+		if value, exists := valueAt(dataset, country, to, indicator); exists {
 			ranked = append(ranked, struct {
 				code  string
 				name  string
@@ -564,14 +783,14 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 			Rank:  index + 1,
 			Code:  entry.code,
 			Name:  entry.name,
-			Value: "$" + strconv.FormatFloat(entry.value/1e9, 'f', 0, 64) + "B",
+			Value: formatValue(entry.value, indicator),
 		})
 	}
 	for _, code := range selected {
 		country := dataset.ByCode[code]
 		growth := "Unavailable"
-		current, hasCurrent := dataset.gdpAt(country, to)
-		previous, hasPrevious := dataset.gdpAt(country, to-1)
+		current, hasCurrent := valueAt(dataset, country, to, indicator)
+		previous, hasPrevious := valueAt(dataset, country, to-1, indicator)
 		if hasCurrent && hasPrevious && previous != 0 {
 			growth = fmt.Sprintf("%.2f%%", (current/previous-1)*100)
 		}
@@ -579,6 +798,70 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 			Code:   code,
 			Name:   country.Name,
 			Growth: growth,
+		})
+	}
+	groupTotals := make(map[string]struct {
+		total float64
+		count int
+	})
+	for _, country := range dataset.Countries {
+		value, exists := valueAt(dataset, country, to, indicator)
+		if !exists {
+			continue
+		}
+		for _, label := range []string{"Region: " + country.Region, "Income group: " + country.IncomeLevel} {
+			if strings.HasSuffix(label, ": ") {
+				continue
+			}
+			entry := groupTotals[label]
+			entry.total += value
+			entry.count++
+			groupTotals[label] = entry
+		}
+	}
+	for label, group := range groupTotals {
+		page.Comparisons = append(page.Comparisons, comparisonRow{
+			Group: label, Average: formatValue(group.total/float64(group.count), indicator), Count: group.count,
+		})
+	}
+	sort.Slice(page.Comparisons, func(i, j int) bool {
+		return page.Comparisons[i].Group < page.Comparisons[j].Group
+	})
+	mapValues := make([]float64, 0, len(dataset.Map))
+	for _, boundary := range dataset.Map {
+		if country, exists := dataset.ByCode[boundary.Code]; exists {
+			if value, available := valueAt(dataset, country, to, indicator); available {
+				mapValues = append(mapValues, value)
+			}
+		}
+	}
+	sort.Float64s(mapValues)
+	breaks := make([]float64, 4)
+	for index := range breaks {
+		if len(mapValues) > 0 {
+			breaks[index] = mapValues[minInt(len(mapValues)-1, (index+1)*len(mapValues)/5)]
+		}
+	}
+	palette := []string{"#dce8f6", "#a9c5e8", "#6f9ed6", "#3764d8", "#203f92"}
+	for _, boundary := range dataset.Map {
+		fill, title := "#e9edf2", boundary.Title
+		if country, exists := dataset.ByCode[boundary.Code]; exists {
+			if value, available := valueAt(dataset, country, to, indicator); available {
+				bin := 0
+				for bin < len(breaks) && value > breaks[bin] {
+					bin++
+				}
+				fill = palette[bin]
+				title = country.Name + ": " + formatValue(value, indicator)
+			}
+		}
+		if title == "" {
+			title = boundary.Code
+		} else {
+			title += " (" + boundary.Code + ")"
+		}
+		page.MapCountries = append(page.MapCountries, mapCountry{
+			Code: boundary.Code, Path: boundary.Path, Fill: fill, Title: title + " in " + strconv.Itoa(to),
 		})
 	}
 	return page
@@ -593,6 +876,8 @@ func maxInt(left, right int) int {
 
 func run() error {
 	dataPath := flag.String("data", "data/gdp_data.csv", "path to the World Bank GDP CSV")
+	indicatorPath := flag.String("indicators", "data/world_bank_indicators.json", "path to the refreshed World Bank indicator snapshot")
+	mapPath := flag.String("map", "data/world_countries.geojson", "path to the Natural Earth country boundaries")
 	flag.Parse()
 	file, err := os.Open(*dataPath)
 	if err != nil {
@@ -605,6 +890,25 @@ func run() error {
 	}
 	if len(dataset.Years) == 0 {
 		return errors.New("GDP dataset contains no years")
+	}
+	indicatorFile, indicatorErr := os.Open(*indicatorPath)
+	if indicatorErr == nil {
+		mapFile, mapErr := os.Open(*mapPath)
+		if mapErr != nil {
+			indicatorFile.Close()
+			return fmt.Errorf("open Natural Earth boundaries %q: %w", *mapPath, mapErr)
+		}
+		if err := loadIndicatorData(dataset, indicatorFile, mapFile); err != nil {
+			indicatorFile.Close()
+			mapFile.Close()
+			return err
+		}
+		indicatorFile.Close()
+		mapFile.Close()
+	} else if !errors.Is(indicatorErr, os.ErrNotExist) {
+		return fmt.Errorf("open World Bank indicator snapshot %q: %w", *indicatorPath, indicatorErr)
+	} else {
+		log.Printf("indicator/map data not found; run scripts/refresh-dashboard-data.mjs to enable the new views")
 	}
 	tmpl, err := template.New("dashboard").Funcs(template.FuncMap{
 		"add": func(left, right float64) float64 { return left + right },
@@ -659,18 +963,22 @@ func run() error {
 			from = to
 		}
 		selected := selectedCodes(request.URL.Query()["country"], dataset)
+		indicator := request.URL.Query().Get("indicator")
+		if indicator != "gdpPerCapita" && indicator != "realGDP" {
+			indicator = "gdp"
+		}
 		response.Header().Set("Content-Type", "text/csv; charset=utf-8")
-		response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"gdp-%d-%d.csv\"", from, to))
+		response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s-%d-%d.csv\"", indicator, from, to))
 		response.Header().Set("X-Content-Type-Options", "nosniff")
 		response.Header().Set("Cache-Control", "no-store")
 		writer := csv.NewWriter(response)
-		_ = writer.Write([]string{"Country Name", "Country Code", "Year", "GDP"})
+		_ = writer.Write([]string{"Country Name", "Country Code", "Year", indicatorTitle(indicator)})
 		for _, code := range selected {
 			country := dataset.ByCode[code]
 			for year := from; year <= to; year++ {
 				value := ""
-				if gdp, exists := dataset.gdpAt(country, year); exists {
-					value = strconv.FormatFloat(gdp, 'f', -1, 64)
+				if observation, exists := valueAt(dataset, country, year, indicator); exists {
+					value = strconv.FormatFloat(observation, 'f', -1, 64)
 				}
 				_ = writer.Write([]string{country.Name, country.Code, strconv.Itoa(year), value})
 			}

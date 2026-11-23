@@ -23,6 +23,8 @@
       h2 { font-size: 1.2rem; margin: 32px 0 14px; letter-spacing: -.015em; }
       .chart-wrap { overflow-x: auto; }
       svg.chart { display: block; width: 100%; min-width: 560px; height: auto; }
+      .world-map-wrap { overflow-x: auto; }
+      svg.world-map-svg { display: block; width: 100%; min-width: 560px; height: auto; }
       .grid-line { stroke: #e8edf4; stroke-width: 1; }
       .axis-label { fill: #758198; font-size: 12px; }
       .series-line { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
@@ -57,6 +59,13 @@
       <div id="status" role="status" aria-live="polite">Loading GDP data…</div>
       <section id="dashboard" hidden>
         <div class="panel controls">
+          <label for="indicator">Indicator
+            <select id="indicator">
+              <option value="gdp">GDP (current US$)</option>
+              <option value="gdpPerCapita">GDP per capita (current US$)</option>
+              <option value="realGDP">Real GDP (constant 2015 US$)</option>
+            </select>
+          </label>
           <div>
             <div class="control-title">Years</div>
             <div class="years">
@@ -70,7 +79,7 @@
             <p class="hint" id="country-hint">Use Ctrl (Windows/Linux) or ⌘ (Mac) to select multiple countries.</p>
           </div>
         </div>
-        <h2>GDP over time</h2>
+        <h2 id="chart-heading">GDP over time</h2>
         <div class="panel">
           <div id="chart" class="chart-wrap"></div>
           <div id="legend" class="legend"></div>
@@ -83,13 +92,18 @@
         <div class="two-column">
           <section>
             <h2 id="ranking-heading">GDP rankings</h2>
-            <div class="panel"><table><thead><tr><th>Rank</th><th>Country</th><th class="numeric">GDP</th></tr></thead><tbody id="rankings"></tbody></table></div>
+            <div class="panel"><table><thead><tr><th>Rank</th><th>Country</th><th id="ranking-value-heading" class="numeric">GDP</th></tr></thead><tbody id="rankings"></tbody></table></div>
           </section>
           <section>
             <h2 id="growth-heading">Annual GDP growth</h2>
             <div class="panel"><table><thead><tr><th>Country</th><th class="numeric">Growth</th></tr></thead><tbody id="annual-growth"></tbody></table></div>
           </section>
         </div>
+        <h2 id="map-heading">World map</h2>
+        <div class="panel world-map-wrap"><div id="world-map"></div><div id="map-legend" class="legend"></div></div>
+        <h2 id="comparison-heading">Regional and income-group comparisons</h2>
+        <p class="hint">Averages use countries with reported values for the selected indicator and year.</p>
+        <div class="panel"><div id="group-comparisons"></div></div>
       </section>
     </main>
   </body>

@@ -34,6 +34,7 @@ The setup scripts accept a choice to skip the prompt (`typescript`, `go`, or `bo
 Requires Node.js 18 or newer. To install and run it manually from the repository root:
 
 ```sh
+node scripts/refresh-dashboard-data.mjs
 cd typescript-dashboard
 npm ci
 npm run build
@@ -42,13 +43,14 @@ npm start
 
 Open [http://localhost:3000](http://localhost:3000). Set `PORT` to use a different port.
 
-Run the TypeScript build and server checks with `cd typescript-dashboard && npm test`.
+Run the TypeScript build, server checks, and fixture-based refresh tests with `cd typescript-dashboard && npm test`.
 
 ## Go
 
 Requires Go 1.21 or newer. From the repository root:
 
 ```sh
+node scripts/refresh-dashboard-data.mjs
 go run ./go-dashboard
 ```
 
@@ -70,3 +72,16 @@ Both non-Python dashboards provide:
 - GDP rankings for the selected end year
 - CSV export of the visible country/year selection
 - Explicit unavailable states for missing World Bank observations
+- GDP per capita (current US$) and inflation-adjusted GDP (constant 2015 US$)
+- A selected-year world map and region/income-group comparisons for the selected indicator
+
+### Indicator and map data
+
+The Python implementation is unchanged. The TypeScript and Go dashboards use the existing `data/gdp_data.csv` for headline GDP and a generated shared snapshot for the additional views. Refresh it with `node scripts/refresh-dashboard-data.mjs`; it downloads:
+
+- `NY.GDP.PCAP.CD` (GDP per capita, current US$) and `NY.GDP.MKTP.KD` (GDP, constant 2015 US$) from the [World Bank Indicators API v2](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation).
+- 1:110m country boundaries from [Natural Earth](https://www.naturalearthdata.com/downloads/110m-cultural-vectors/).
+
+The refresh year range defaults to the years in `data/gdp_data.csv`. Set `WB_START_YEAR` and `WB_END_YEAR` to override it, `WORLD_BANK_API_BASE` to change the API base, and `NATURAL_EARTH_GEOJSON_URL` to select another compatible GeoJSON boundary file. `DASHBOARD_DATA_DIR` can direct output to a separate directory containing `gdp_data.csv`. Both remote sources are fetched and validated before the existing snapshot files are replaced, so a failed download leaves the prior snapshots available. Restart the dashboard after a refresh to load the updated files.
+
+The map uses an equirectangular projection and joins Natural Earth country codes to World Bank ISO-3 codes; a few territories or disputed areas may not match. Missing indicator observations are omitted from rankings and group averages and shown as unfilled map areas. Group values are unweighted country averages, not population-weighted values or regional totals. The World Bank API may return unavailable values for recent years; refresh uses the range of the existing GDP CSV by default.
