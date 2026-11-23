@@ -1,0 +1,25 @@
+name: Go tests
+
+on:
+  push:
+    paths:
+      - "go-dashboard/**"
+      - "go.mod"
+      - ".github/workflows/go-test.yml"
+  pull_request:
+    paths:
+      - "go-dashboard/**"
+      - "go.mod"
+      - ".github/workflows/go-test.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21.x"
+          cache: false
+      - run: go test ./go-dashboard
+      - run: go build -o /tmp/gdp-dashboard ./go-dashboard

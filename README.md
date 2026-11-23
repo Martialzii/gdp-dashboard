@@ -56,7 +56,7 @@ go run ./go-dashboard
 
 Open [http://localhost:8080](http://localhost:8080). Set `PORT` to use a different port or pass `-data path/to/gdp_data.csv` to load a different CSV file.
 
-Run the Go tests with `go test ./...`.
+Run the Go tests with `go test ./go-dashboard`. The Go test and build also run in GitHub Actions when Go dashboard files change.
 
 ### Performance and caching
 
