@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"container/list"
 	"encoding/csv"
 	"errors"
 	"flag"
@@ -14,24 +16,37 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type Country struct {
 	Code string
 	Name string
-	GDP  map[int]float64
+	GDP  []float64
 }
 
 type Dataset struct {
 	Countries []Country
 	ByCode    map[string]Country
 	Years     []int
+	YearIndex map[int]int
 }
 
 type chartSeries struct {
 	Code   string
 	Color  string
 	Points string
+}
+
+type chartPoint struct {
+	Year  int
+	Value float64
+}
+
+type pointBucket struct {
+	Min chartPoint
+	Max chartPoint
+	Has bool
 }
 
 type countryOption struct {
@@ -82,6 +97,70 @@ type pageData struct {
 	Empty      bool
 	Rankings   []rankingRow
 	GrowthRows []annualGrowthRow
+}
+
+type cachedPage struct {
+	key  string
+	body []byte
+}
+
+type pageCache struct {
+	mu         sync.Mutex
+	capacity   int
+	maxBytes   int
+	totalBytes int
+	entries    map[string]*list.Element
+	order      *list.List
+}
+
+func newPageCache(capacity int) *pageCache {
+	if capacity < 1 {
+		capacity = 1
+	}
+	return &pageCache{
+		capacity: capacity,
+		maxBytes: 32 << 20,
+		entries:  make(map[string]*list.Element, capacity),
+		order:    list.New(),
+	}
+}
+
+func (cache *pageCache) get(key string) ([]byte, bool) {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	element := cache.entries[key]
+	if element == nil {
+		return nil, false
+	}
+	cache.order.MoveToFront(element)
+	return element.Value.(cachedPage).body, true
+}
+
+func (cache *pageCache) put(key string, body []byte) {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	size := len(key) + len(body)
+	if size > cache.maxBytes {
+		return
+	}
+	if element := cache.entries[key]; element != nil {
+		entry := element.Value.(cachedPage)
+		cache.totalBytes -= len(entry.key) + len(entry.body)
+		element.Value = cachedPage{key: key, body: body}
+		cache.totalBytes += size
+		cache.order.MoveToFront(element)
+		return
+	}
+	element := cache.order.PushFront(cachedPage{key: key, body: body})
+	cache.entries[key] = element
+	cache.totalBytes += size
+	for cache.order.Len() > cache.capacity || cache.totalBytes > cache.maxBytes {
+		oldest := cache.order.Back()
+		entry := oldest.Value.(cachedPage)
+		cache.totalBytes -= len(entry.key) + len(entry.body)
+		delete(cache.entries, entry.key)
+		cache.order.Remove(oldest)
+	}
 }
 
 const pageTemplate = `<!doctype html>
@@ -155,6 +234,7 @@ const pageTemplate = `<!doctype html>
 func loadDataset(source io.Reader) (*Dataset, error) {
 	reader := csv.NewReader(source)
 	reader.FieldsPerRecord = -1
+	reader.ReuseRecord = true
 	header, err := reader.Read()
 	if err != nil {
 		return nil, fmt.Errorf("read GDP CSV header: %w", err)
@@ -178,13 +258,21 @@ func loadDataset(source io.Reader) (*Dataset, error) {
 			}{year: year, index: index})
 		}
 	}
+	sort.Slice(yearColumns, func(i, j int) bool {
+		return yearColumns[i].year < yearColumns[j].year
+	})
 	if nameIndex < 0 || codeIndex < 0 || len(yearColumns) == 0 {
 		return nil, errors.New("GDP CSV is missing the expected World Bank columns")
 	}
 
-	dataset := &Dataset{ByCode: make(map[string]Country), Years: make([]int, 0, len(yearColumns))}
-	for _, column := range yearColumns {
+	dataset := &Dataset{
+		ByCode:    make(map[string]Country),
+		Years:     make([]int, 0, len(yearColumns)),
+		YearIndex: make(map[int]int, len(yearColumns)),
+	}
+	for index, column := range yearColumns {
 		dataset.Years = append(dataset.Years, column.year)
+		dataset.YearIndex[column.year] = index
 	}
 	for {
 		record, readErr := reader.Read()
@@ -201,14 +289,17 @@ func loadDataset(source io.Reader) (*Dataset, error) {
 		if code == "" {
 			continue
 		}
-		country := Country{Code: code, Name: record[nameIndex], GDP: make(map[int]float64)}
+		country := Country{Code: code, Name: record[nameIndex], GDP: make([]float64, len(yearColumns))}
+		for index := range country.GDP {
+			country.GDP[index] = math.NaN()
+		}
 		for _, column := range yearColumns {
 			if column.index >= len(record) || strings.TrimSpace(record[column.index]) == "" {
 				continue
 			}
 			value, parseErr := strconv.ParseFloat(strings.TrimSpace(record[column.index]), 64)
 			if parseErr == nil && !math.IsNaN(value) && !math.IsInf(value, 0) {
-				country.GDP[column.year] = value
+				country.GDP[dataset.YearIndex[column.year]] = value
 			}
 		}
 		dataset.ByCode[code] = country
@@ -222,6 +313,90 @@ func loadDataset(source io.Reader) (*Dataset, error) {
 		return dataset.Countries[i].Code < dataset.Countries[j].Code
 	})
 	return dataset, nil
+}
+
+func (dataset *Dataset) gdpAt(country Country, year int) (float64, bool) {
+	index, exists := dataset.YearIndex[year]
+	if !exists || index >= len(country.GDP) || math.IsNaN(country.GDP[index]) {
+		return 0, false
+	}
+	return country.GDP[index], true
+}
+
+func chartPoints(dataset *Dataset, country Country, from, to int) []chartPoint {
+	const maximumPoints = 800
+	yearSpan := to - from + 1
+	if yearSpan <= maximumPoints {
+		points := make([]chartPoint, 0, yearSpan)
+		for year := from; year <= to; year++ {
+			if value, exists := dataset.gdpAt(country, year); exists {
+				points = append(points, chartPoint{Year: year, Value: value})
+			}
+		}
+		return points
+	}
+
+	const bucketLimit = (maximumPoints - 2) / 2
+	bucketCount := minInt(bucketLimit, yearSpan)
+	buckets := make([]pointBucket, bucketCount)
+	var first, last chartPoint
+	hasPoint := false
+	for year := from; year <= to; year++ {
+		value, exists := dataset.gdpAt(country, year)
+		if !exists {
+			continue
+		}
+		point := chartPoint{Year: year, Value: value}
+		if !hasPoint {
+			first = point
+			hasPoint = true
+		}
+		last = point
+		bucketIndex := (year - from) * bucketCount / yearSpan
+		if bucketIndex >= bucketCount {
+			bucketIndex = bucketCount - 1
+		}
+		bucket := &buckets[bucketIndex]
+		if !bucket.Has {
+			bucket.Min, bucket.Max, bucket.Has = point, point, true
+		} else {
+			if point.Value < bucket.Min.Value {
+				bucket.Min = point
+			}
+			if point.Value > bucket.Max.Value {
+				bucket.Max = point
+			}
+		}
+	}
+	if !hasPoint {
+		return nil
+	}
+
+	points := make([]chartPoint, 0, maximumPoints)
+	points = append(points, first)
+	for _, bucket := range buckets {
+		if bucket.Has {
+			points = append(points, bucket.Min, bucket.Max)
+		}
+	}
+	points = append(points, last)
+	sort.Slice(points, func(i, j int) bool {
+		return points[i].Year < points[j].Year
+	})
+	unique := points[:0]
+	for _, point := range points {
+		if len(unique) == 0 || unique[len(unique)-1].Year != point.Year {
+			unique = append(unique, point)
+		}
+	}
+	return unique
+}
+
+func minInt(left, right int) int {
+	if left < right {
+		return left
+	}
+	return right
 }
 
 func maxIndex(left, right int) int {
@@ -277,9 +452,9 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 
 	page := pageData{
 		From: from, To: to, MinYear: minimum, MaxYear: maximum,
-		Countries: make([]countryOption, 0, len(dataset.Countries)),
-		Metrics:   make([]metric, 0, len(selected)),
-		Rankings:  make([]rankingRow, 0, len(selected)),
+		Countries:  make([]countryOption, 0, len(dataset.Countries)),
+		Metrics:    make([]metric, 0, len(selected)),
+		Rankings:   make([]rankingRow, 0, len(selected)),
 		GrowthRows: make([]annualGrowthRow, 0, len(selected)),
 	}
 	for _, country := range dataset.Countries {
@@ -291,19 +466,25 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	const width, height, left, right, top, bottom = 1000.0, 390.0, 76.0, 18.0, 18.0, 40.0
 	plotWidth, plotHeight := width-left-right, height-top-bottom
 	maxGDP := 0.0
+	hasGDP := false
 	for _, code := range selected {
 		for year := from; year <= to; year++ {
-			if value := dataset.ByCode[code].GDP[year]; value > maxGDP {
-				maxGDP = value
+			value, exists := dataset.gdpAt(dataset.ByCode[code], year)
+			if exists {
+				hasGDP = true
+				if value > maxGDP {
+					maxGDP = value
+				}
 			}
 		}
 	}
-	page.Empty = maxGDP == 0
+	page.Empty = !hasGDP
 	if !page.Empty {
+		scaleGDP := math.Max(maxGDP, 1)
 		for tick := 0; tick <= 4; tick++ {
 			page.Grid = append(page.Grid, gridLine{
-				Y: top + plotHeight*float64(tick)/4,
-				Label: fmt.Sprintf("$%sB", strconv.FormatFloat(maxGDP*float64(4-tick)/4/1e9, 'f', 1, 64)),
+				Y:     top + plotHeight*float64(tick)/4,
+				Label: fmt.Sprintf("$%sB", strconv.FormatFloat(scaleGDP*float64(4-tick)/4/1e9, 'f', 1, 64)),
 			})
 		}
 		span := maxInt(to-from, 1)
@@ -325,23 +506,20 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		palette := []string{"#3764d8", "#e05c42", "#14946b", "#9a56c4", "#da9b22", "#168eaa", "#d34d88", "#697b30"}
 		for index, code := range selected {
 			country := dataset.ByCode[code]
-			points := make([]string, 0, to-from+1)
-			for year := from; year <= to; year++ {
-				value, exists := country.GDP[year]
-				if !exists {
-					continue
-				}
-				x := left + float64(year-from)/float64(span)*plotWidth
-				y := top + plotHeight - value/maxGDP*plotHeight
-				points = append(points, fmt.Sprintf("%.2f,%.2f", x, y))
+			points := chartPoints(dataset, country, from, to)
+			coordinates := make([]string, 0, len(points))
+			for _, point := range points {
+				x := left + float64(point.Year-from)/float64(span)*plotWidth
+				y := top + plotHeight - point.Value/scaleGDP*plotHeight
+				coordinates = append(coordinates, fmt.Sprintf("%.2f,%.2f", x, y))
 			}
-			if len(points) > 0 {
+			if len(coordinates) > 0 {
 				page.Series = append(page.Series, chartSeries{
-					Code: code, Color: palette[index%len(palette)], Points: strings.Join(points, " "),
+					Code: code, Color: palette[index%len(palette)], Points: strings.Join(coordinates, " "),
 				})
 			}
-			current, hasCurrent := country.GDP[to]
-			initial, hasInitial := country.GDP[from]
+			current, hasCurrent := dataset.gdpAt(country, to)
+			initial, hasInitial := dataset.gdpAt(country, from)
 			valueLabel, growth := "N/A", "Growth unavailable"
 			if hasCurrent {
 				valueLabel = "$" + strconv.FormatFloat(current/1e9, 'f', 0, 64) + "B"
@@ -354,7 +532,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	} else {
 		for _, code := range selected {
 			country := dataset.ByCode[code]
-			current, hasCurrent := country.GDP[to]
+			current, hasCurrent := dataset.gdpAt(country, to)
 			valueLabel := "N/A"
 			if hasCurrent {
 				valueLabel = "$" + strconv.FormatFloat(current/1e9, 'f', 0, 64) + "B"
@@ -370,7 +548,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	}, 0, len(selected))
 	for _, code := range selected {
 		country := dataset.ByCode[code]
-		if value, exists := country.GDP[to]; exists {
+		if value, exists := dataset.gdpAt(country, to); exists {
 			ranked = append(ranked, struct {
 				code  string
 				name  string
@@ -383,23 +561,23 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	})
 	for index, entry := range ranked {
 		page.Rankings = append(page.Rankings, rankingRow{
-			Rank: index + 1,
-			Code: entry.code,
-			Name: entry.name,
+			Rank:  index + 1,
+			Code:  entry.code,
+			Name:  entry.name,
 			Value: "$" + strconv.FormatFloat(entry.value/1e9, 'f', 0, 64) + "B",
 		})
 	}
 	for _, code := range selected {
 		country := dataset.ByCode[code]
 		growth := "Unavailable"
-		current, hasCurrent := country.GDP[to]
-		previous, hasPrevious := country.GDP[to-1]
+		current, hasCurrent := dataset.gdpAt(country, to)
+		previous, hasPrevious := dataset.gdpAt(country, to-1)
 		if hasCurrent && hasPrevious && previous != 0 {
 			growth = fmt.Sprintf("%.2f%%", (current/previous-1)*100)
 		}
 		page.GrowthRows = append(page.GrowthRows, annualGrowthRow{
-			Code: code,
-			Name: country.Name,
+			Code:   code,
+			Name:   country.Name,
 			Growth: growth,
 		})
 	}
@@ -439,18 +617,41 @@ func run() error {
 		port = "8080"
 	}
 	mux := http.NewServeMux()
+	pages := newPageCache(16)
 	mux.HandleFunc("/", func(response http.ResponseWriter, request *http.Request) {
 		if request.URL.Path != "/" {
 			http.NotFound(response, request)
 			return
 		}
+		if request.Method != http.MethodGet && request.Method != http.MethodHead {
+			response.Header().Set("Allow", "GET, HEAD")
+			http.Error(response, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 		response.Header().Set("Content-Type", "text/html; charset=utf-8")
 		response.Header().Set("X-Content-Type-Options", "nosniff")
-		if err := tmpl.Execute(response, buildPage(dataset, request)); err != nil {
-			log.Printf("render dashboard: %v", err)
+		response.Header().Set("Cache-Control", "private, max-age=30")
+		cacheKey := request.URL.RawQuery
+		if body, ok := pages.get(cacheKey); ok {
+			_, _ = response.Write(body)
+			return
 		}
+		var body bytes.Buffer
+		if err := tmpl.Execute(&body, buildPage(dataset, request)); err != nil {
+			log.Printf("render dashboard: %v", err)
+			http.Error(response, "Unable to render dashboard", http.StatusInternalServerError)
+			return
+		}
+		page := body.Bytes()
+		pages.put(cacheKey, page)
+		_, _ = response.Write(page)
 	})
 	mux.HandleFunc("/export.csv", func(response http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet {
+			response.Header().Set("Allow", "GET")
+			http.Error(response, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 		minimum, maximum := dataset.Years[0], dataset.Years[len(dataset.Years)-1]
 		from := boundedYear(request.URL.Query().Get("from"), minimum, minimum, maximum)
 		to := boundedYear(request.URL.Query().Get("to"), maximum, minimum, maximum)
@@ -461,13 +662,14 @@ func run() error {
 		response.Header().Set("Content-Type", "text/csv; charset=utf-8")
 		response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"gdp-%d-%d.csv\"", from, to))
 		response.Header().Set("X-Content-Type-Options", "nosniff")
+		response.Header().Set("Cache-Control", "no-store")
 		writer := csv.NewWriter(response)
 		_ = writer.Write([]string{"Country Name", "Country Code", "Year", "GDP"})
 		for _, code := range selected {
 			country := dataset.ByCode[code]
 			for year := from; year <= to; year++ {
 				value := ""
-				if gdp, exists := country.GDP[year]; exists {
+				if gdp, exists := dataset.gdpAt(country, year); exists {
 					value = strconv.FormatFloat(gdp, 'f', -1, 64)
 				}
 				_ = writer.Write([]string{country.Name, country.Code, strconv.Itoa(year), value})

@@ -139,6 +139,7 @@ venv.bak/
 # JavaScript / TypeScript
 node_modules/
 typescript-dashboard/dist/
+/bin/
 
 # Rope project settings
 .ropeproject

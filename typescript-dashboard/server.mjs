@@ -1,42 +1,120 @@
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const files = new Map([
-  ["/", [path.join(root, "index.html"), "text/html; charset=utf-8"]],
-  ["/dashboard.js", [path.join(root, "dist", "dashboard.js"), "text/javascript; charset=utf-8"]],
-  ["/data/gdp_data.csv", [path.join(root, "..", "data", "gdp_data.csv"), "text/csv; charset=utf-8"]],
-]);
+const csvPath = path.join(root, "..", "data", "gdp_data.csv");
 const port = Number.parseInt(process.env.PORT ?? "3000", 10);
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("PORT must be an integer between 1 and 65535");
 }
 
-createServer(async (request, response) => {
-  const file = files.get(new URL(request.url ?? "/", "http://localhost").pathname);
-  if (!file) {
+async function loadAsset(filePath, contentType) {
+  const body = await readFile(filePath);
+  return {
+    body,
+    contentType,
+    etag: `"${createHash("sha256").update(body).digest("hex")}"`,
+  };
+}
+
+const assets = new Map([
+  ["/", await loadAsset(path.join(root, "index.html"), "text/html; charset=utf-8")],
+  ["/dashboard.js", await loadAsset(path.join(root, "dist", "dashboard.js"), "text/javascript; charset=utf-8")],
+]);
+const csvInfo = await stat(csvPath);
+const csvEtag = `W/"${csvInfo.size.toString(16)}-${Math.trunc(csvInfo.mtimeMs).toString(16)}"`;
+
+function isNotModified(request, etag, lastModified) {
+  const supplied = request.headers["if-none-match"];
+  if (supplied !== undefined) {
+    return supplied.split(",").some((value) => value.trim() === "*" || value.trim() === etag);
+  }
+  const modifiedSince = request.headers["if-modified-since"];
+  return lastModified > 0 && modifiedSince !== undefined &&
+    Date.parse(modifiedSince) >= Math.floor(lastModified / 1000) * 1000;
+}
+
+function sendCachedAsset(request, response, asset) {
+  response.setHeader("content-type", asset.contentType);
+  response.setHeader("content-length", asset.body.byteLength);
+  response.setHeader("cache-control", "no-cache");
+  response.setHeader("etag", asset.etag);
+  response.setHeader("x-content-type-options", "nosniff");
+  if (isNotModified(request, asset.etag, 0)) {
+    response.writeHead(304);
+    response.end();
+    return;
+  }
+  response.writeHead(200);
+  response.end(request.method === "HEAD" ? undefined : asset.body);
+}
+
+const server = createServer((request, response) => {
+  let pathname;
+  try {
+    pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+  } catch {
+    response.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+    response.end("Invalid request URL");
+    return;
+  }
+
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    response.writeHead(405, { allow: "GET, HEAD", "content-type": "text/plain; charset=utf-8" });
+    response.end("Method not allowed");
+    return;
+  }
+
+  const asset = assets.get(pathname);
+  if (asset) {
+    sendCachedAsset(request, response, asset);
+    return;
+  }
+  if (pathname !== "/data/gdp_data.csv") {
     response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     response.end("Not found");
     return;
   }
 
-  try {
-    const body = await readFile(file[0]);
-    response.writeHead(200, {
-      "content-type": file[1],
-      "content-length": body.byteLength,
-      "x-content-type-options": "nosniff",
-    });
-    response.end(body);
-  } catch (error) {
-    const missingBuild = file[0] === path.join(root, "dist", "dashboard.js");
-    response.writeHead(missingBuild ? 503 : 500, { "content-type": "text/plain; charset=utf-8" });
-    response.end(missingBuild ? "Build the dashboard first with: npm run build" : "Unable to load dashboard resources");
-    if (!missingBuild) console.error(error);
+  const lastModified = csvInfo.mtime;
+  response.setHeader("content-type", "text/csv; charset=utf-8");
+  response.setHeader("content-length", csvInfo.size);
+  response.setHeader("cache-control", "public, max-age=300");
+  response.setHeader("etag", csvEtag);
+  response.setHeader("last-modified", lastModified.toUTCString());
+  response.setHeader("x-content-type-options", "nosniff");
+  if (isNotModified(request, csvEtag, csvInfo.mtimeMs)) {
+    response.writeHead(304);
+    response.end();
+    return;
   }
-}).listen(port, "127.0.0.1", () => {
+  if (request.method === "HEAD") {
+    response.writeHead(200);
+    response.end();
+    return;
+  }
+
+  const stream = createReadStream(csvPath);
+  stream.on("error", (error) => {
+    console.error("Unable to stream the GDP dataset:", error);
+    if (response.headersSent) response.destroy(error);
+    else {
+      response.writeHead(500, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Unable to load dashboard resources");
+    }
+  });
+  stream.pipe(response);
+});
+
+server.on("error", (error) => {
+  console.error("Unable to start the GDP dashboard:", error);
+  process.exitCode = 1;
+});
+server.listen(port, "127.0.0.1", () => {
   console.log(`GDP dashboard listening at http://localhost:${port}`);
 });

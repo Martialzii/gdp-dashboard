@@ -1,7 +1,7 @@
 interface Country {
   code: string;
   name: string;
-  gdpByYear: Map<number, number>;
+  gdpByYear: Float64Array;
 }
 
 interface DataPoint {
@@ -12,73 +12,115 @@ interface DataPoint {
 const defaultCountries = ["DEU", "FRA", "GBR", "BRA", "MEX", "JPN"];
 const colors = ["#3764d8", "#e05c42", "#14946b", "#9a56c4", "#da9b22", "#168eaa", "#d34d88", "#697b30"];
 const svgNamespace = "http://www.w3.org/2000/svg";
+const maximumChartPoints = 800;
+let yearIndexes = new Map<number, number>();
 
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
+async function* readCsvRows(response: Response): AsyncGenerator<string[], void, unknown> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("Streaming dataset responses are not supported by this browser");
+  const decoder = new TextDecoder();
   let row: string[] = [];
   let field = "";
   let quoted = false;
+  let pendingQuote = false;
+  let previousWasCarriageReturn = false;
+  let firstCharacter = true;
 
-  for (let index = 0; index < text.length; index += 1) {
-    const character = text[index];
-    if (quoted) {
-      if (character === '"' && text[index + 1] === '"') {
-        field += '"';
-        index += 1;
-      } else if (character === '"') {
-        quoted = false;
-      } else {
-        field += character;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      const chunk = decoder.decode(value, { stream: !done });
+      for (const character of chunk) {
+        if (firstCharacter) {
+          firstCharacter = false;
+          if (character === "\uFEFF") continue;
+        }
+        if (quoted && pendingQuote) {
+          pendingQuote = false;
+          if (character === '"') {
+            field += '"';
+            continue;
+          }
+          quoted = false;
+        } else if (quoted) {
+          if (character === '"') pendingQuote = true;
+          else field += character;
+          continue;
+        }
+
+        if (previousWasCarriageReturn && character === "\n") {
+          previousWasCarriageReturn = false;
+          continue;
+        }
+        previousWasCarriageReturn = false;
+        if (character === '"') {
+          quoted = true;
+        } else if (character === ",") {
+          row.push(field);
+          field = "";
+        } else if (character === "\n" || character === "\r") {
+          row.push(field);
+          yield row;
+          row = [];
+          field = "";
+          previousWasCarriageReturn = character === "\r";
+        } else {
+          field += character;
+        }
       }
-    } else if (character === '"') {
-      quoted = true;
-    } else if (character === ",") {
-      row.push(field);
-      field = "";
-    } else if (character === "\n" || character === "\r") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-      if (character === "\r" && text[index + 1] === "\n") index += 1;
-    } else {
-      field += character;
+      if (done) break;
     }
+    if (quoted && !pendingQuote) throw new Error("The GDP CSV contains an unterminated quoted field");
+    if (field.length > 0 || row.length > 0) {
+      row.push(field);
+      yield row;
+    }
+  } finally {
+    reader.releaseLock();
   }
-
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows;
 }
 
-function parseDataset(text: string): { countries: Country[]; years: number[] } {
-  const rows = parseCsv(text);
-  const header = rows[0];
-  if (!header) throw new Error("The GDP CSV is empty");
+async function parseDataset(response: Response): Promise<{ countries: Country[]; years: number[] }> {
+  const rows = readCsvRows(response);
+  const headerResult = await rows.next();
+  if (headerResult.done) throw new Error("The GDP CSV is empty");
+  const header = headerResult.value.map((value) => value.trim());
   const nameIndex = header.indexOf("Country Name");
   const codeIndex = header.indexOf("Country Code");
   const yearColumns = header
     .map((column, index) => ({ year: Number(column), index }))
-    .filter(({ year }) => Number.isInteger(year) && year >= 1900);
+    .filter(({ year }) => Number.isInteger(year) && year >= 1900)
+    .sort((left, right) => left.year - right.year);
   if (nameIndex < 0 || codeIndex < 0 || yearColumns.length === 0) {
+    await rows.return(undefined);
     throw new Error("The GDP CSV does not have the expected World Bank columns");
   }
 
+  const years = yearColumns.map(({ year }) => year);
+  yearIndexes = new Map(years.map((year, index) => [year, index]));
   const countries: Country[] = [];
-  for (const values of rows.slice(1)) {
+  for await (const values of rows) {
     const code = values[codeIndex]?.trim();
     if (!code) continue;
-    const gdpByYear = new Map<number, number>();
-    for (const column of yearColumns) {
-      const value = Number(values[column.index]);
-      if (values[column.index]?.trim() && Number.isFinite(value)) gdpByYear.set(column.year, value);
+    const gdpByYear = new Float64Array(years.length);
+    gdpByYear.fill(Number.NaN);
+    for (let index = 0; index < yearColumns.length; index += 1) {
+      const value = values[yearColumns[index].index]?.trim();
+      if (!value) continue;
+      const gdp = Number(value);
+      if (Number.isFinite(gdp)) gdpByYear[index] = gdp;
     }
     countries.push({ code, name: values[nameIndex] ?? code, gdpByYear });
   }
   countries.sort((left, right) => left.code.localeCompare(right.code));
-  return { countries, years: yearColumns.map(({ year }) => year) };
+  return { countries, years };
+}
+
+function gdpFor(country: Country, year: number): number | undefined {
+  const index = yearIndexes.get(year);
+  if (index === undefined) return undefined;
+  const value = country.gdpByYear[index];
+  return Number.isFinite(value) ? value : undefined;
 }
 
 function element<T extends HTMLElement>(id: string): T {
@@ -92,11 +134,47 @@ function makeSvg<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTagNam
 }
 
 function pointsFor(country: Country, fromYear: number, toYear: number): DataPoint[] {
+  const yearSpan = toYear - fromYear + 1;
+  const bucketCount = Math.floor((maximumChartPoints - 2) / 2);
+  const buckets: Array<{ min?: DataPoint; max?: DataPoint }> =
+    yearSpan > maximumChartPoints ? Array.from({ length: bucketCount }, () => ({})) : [];
   const points: DataPoint[] = [];
+  let first: DataPoint | undefined;
+  let last: DataPoint | undefined;
+
   for (let year = fromYear; year <= toYear; year += 1) {
-    const gdp = country.gdpByYear.get(year);
-    if (gdp !== undefined) points.push({ year, gdp });
+    const gdp = gdpFor(country, year);
+    if (gdp === undefined) continue;
+    const point = { year, gdp };
+    if (!first) first = point;
+    last = point;
+
+    if (buckets.length === 0) {
+      points.push(point);
+      continue;
+    }
+
+    const bucketIndex = Math.min(bucketCount - 1, Math.floor(((year - fromYear) * bucketCount) / yearSpan));
+    const bucket = buckets[bucketIndex];
+    if (!bucket.min || !bucket.max) {
+      bucket.min = point;
+      bucket.max = point;
+    } else {
+      if (gdp < bucket.min.gdp) bucket.min = point;
+      if (gdp > bucket.max.gdp) bucket.max = point;
+    }
   }
+  if (buckets.length === 0 || !first || !last) return points;
+
+  points.push(first);
+  for (const bucket of buckets) {
+    if (!bucket.min || !bucket.max) continue;
+    const earlier = bucket.min.year <= bucket.max.year ? bucket.min : bucket.max;
+    const later = bucket.min.year <= bucket.max.year ? bucket.max : bucket.min;
+    if (points[points.length - 1].year !== earlier.year) points.push(earlier);
+    if (points[points.length - 1].year !== later.year) points.push(later);
+  }
+  if (points[points.length - 1].year !== last.year) points.push(last);
   return points;
 }
 
@@ -125,7 +203,11 @@ function renderChart(countries: Country[], fromYear: number, toYear: number): vo
   const bottom = 40;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
-  const maxGDP = Math.max(...series.flatMap(({ points }) => points.map(({ gdp }) => gdp)), 1);
+  let maxGDP = 0;
+  for (const { points } of series) {
+    for (const { gdp } of points) maxGDP = Math.max(maxGDP, gdp);
+  }
+  const scaleGDP = maxGDP > 0 ? maxGDP : 1e9;
   const svg = makeSvg("svg");
   svg.classList.add("chart");
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
@@ -147,7 +229,7 @@ function renderChart(countries: Country[], fromYear: number, toYear: number): vo
     label.setAttribute("x", String(left - 10));
     label.setAttribute("y", String(y + 4));
     label.setAttribute("text-anchor", "end");
-    label.textContent = `$${(maxGDP * (4 - tick)) / 4 / 1e9}B`;
+    label.textContent = `$${((scaleGDP * (4 - tick)) / 4 / 1e9).toFixed(1)}B`;
     svg.append(label);
   }
 
@@ -176,7 +258,7 @@ function renderChart(countries: Country[], fromYear: number, toYear: number): vo
       points
         .map(({ year, gdp }) => {
           const x = left + ((year - fromYear) / span) * plotWidth;
-          const y = top + plotHeight - (gdp / maxGDP) * plotHeight;
+          const y = top + plotHeight - (gdp / scaleGDP) * plotHeight;
           return `${x.toFixed(2)},${y.toFixed(2)}`;
         })
         .join(" "),
@@ -210,11 +292,11 @@ function renderMetrics(countries: Country[], fromYear: number, toYear: number): 
     name.textContent = `${country.code} GDP`;
     const value = document.createElement("div");
     value.className = "metric-value";
-    const current = country.gdpByYear.get(toYear);
+    const current = gdpFor(country, toYear);
     value.textContent = current === undefined ? "N/A" : `$${(current / 1e9).toLocaleString(undefined, { maximumFractionDigits: 0 })}B`;
     const growth = document.createElement("div");
     growth.className = "metric-growth";
-    const initial = country.gdpByYear.get(fromYear);
+    const initial = gdpFor(country, fromYear);
     if (current === undefined || initial === undefined || initial === 0) {
       growth.classList.add("na");
       growth.textContent = "Growth unavailable";
@@ -236,7 +318,7 @@ function renderRankings(countries: Country[], toYear: number): void {
   root.replaceChildren();
   element<HTMLHeadingElement>("ranking-heading").textContent = `GDP rankings in ${toYear}`;
   const ranked = countries
-    .map((country) => ({ country, value: country.gdpByYear.get(toYear) }))
+    .map((country) => ({ country, value: gdpFor(country, toYear) }))
     .filter((entry): entry is { country: Country; value: number } => entry.value !== undefined)
     .sort((left, right) => right.value - left.value);
 
@@ -282,8 +364,8 @@ function renderAnnualGrowth(countries: Country[], toYear: number): void {
   }
 
   countries.forEach((country) => {
-    const current = country.gdpByYear.get(toYear);
-    const previous = country.gdpByYear.get(toYear - 1);
+    const current = gdpFor(country, toYear);
+    const previous = gdpFor(country, toYear - 1);
     const row = document.createElement("tr");
     const code = document.createElement("td");
     code.textContent = `${country.code} — ${country.name}`;
@@ -306,19 +388,24 @@ function exportVisibleCSV(countries: Country[], fromYear: number, toYear: number
     return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
   const rows: Array<Array<string | number>> = [["Country Name", "Country Code", "Year", "GDP"]];
+  const chunks: string[] = [];
   for (const country of countries) {
     for (let year = fromYear; year <= toYear; year += 1) {
-      const gdp = country.gdpByYear.get(year);
+      const gdp = gdpFor(country, year);
       rows.push([country.name, country.code, year, gdp ?? ""]);
+      if (rows.length >= 1000) {
+        chunks.push(`${rows.map((row) => row.map(escapeCSV).join(",")).join("\r\n")}\r\n`);
+        rows.length = 0;
+      }
     }
   }
-  const csv = rows.map((row) => row.map(escapeCSV).join(",")).join("\r\n");
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  if (rows.length > 0) chunks.push(rows.map((row) => row.map(escapeCSV).join(",")).join("\r\n"));
+  const url = URL.createObjectURL(new Blob(chunks, { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
   link.download = `gdp-${fromYear}-${toYear}.csv`;
   link.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function initialize(countries: Country[], years: number[]): void {
@@ -382,7 +469,7 @@ async function start(): Promise<void> {
   try {
     const response = await fetch("/data/gdp_data.csv");
     if (!response.ok) throw new Error(`The GDP dataset request failed (${response.status})`);
-    const { countries, years } = parseDataset(await response.text());
+    const { countries, years } = await parseDataset(response);
     initialize(countries, years);
     element<HTMLDivElement>("status").remove();
   } catch (error) {
