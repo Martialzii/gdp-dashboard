@@ -14,6 +14,169 @@ interface DataPoint {
 }
 
 type Indicator = "gdp" | "gdpPerCapita" | "realGDP";
+type Language = "en" | "es" | "fr";
+
+const translations = {
+  en: {
+    appTitle: "GDP dashboard",
+    introBefore: "Explore economic indicators from",
+    sourceName: "World Bank Open Data",
+    loading: "Loading dashboard data…",
+    language: "Language",
+    indicator: "Indicator",
+    gdp: "GDP (current US$)",
+    gdpPerCapita: "GDP per capita (current US$)",
+    realGDP: "Real GDP (constant 2015 US$)",
+    region: "Region",
+    allRegions: "All regions",
+    incomeGroup: "Income group",
+    allIncomeGroups: "All income groups",
+    years: "Years",
+    from: "From",
+    to: "To",
+    countries: "Countries",
+    countryHint: "Filters narrow the country list, map, and group averages. Use Ctrl (Windows/Linux) or ⌘ (Mac) to select multiple countries.",
+    chartHeading: "{indicator} over time",
+    noGDPSelection: "No data is available for this selection.",
+    metricsHeading: "{indicator} in {year}",
+    growthUnavailable: "Growth unavailable",
+    since: "{ratio}× since {year}",
+    rankingHeading: "{indicator} rankings in {year}",
+    rank: "Rank",
+    country: "Country",
+    value: "Value",
+    noValuesForYear: "No values are available for this year.",
+    annualGrowth: "Annual {indicator} growth for {year}",
+    growth: "Growth",
+    selectCountry: "Select at least one country.",
+    unavailable: "Unavailable",
+    exportCSV: "Export visible data as CSV",
+    worldMap: "World map: {indicator} in {year}",
+    mapAlt: "{indicator} world map in {year}",
+    lowest: "Lowest",
+    middle: "Middle",
+    highest: "Highest",
+    noData: "No data",
+    comparisons: "Regional and income-group comparisons",
+    comparisonHint: "Averages use countries matching the selected filters and with reported values for the selected indicator and year.",
+    group: "Group",
+    average: "Average",
+    countriesCount: "Countries",
+    countryName: "Country Name",
+    countryCode: "Country Code",
+    year: "Year",
+    chartAlt: "{indicator} values from {from} through {to}",
+    noIndicatorForYear: "No {indicator} data is available for {year}.",
+    unableToLoad: "Unable to load dashboard data.",
+    missingSnapshots: "Indicator and map data are missing. Run scripts/refresh-dashboard-data.mjs first.",
+  },
+  es: {
+    appTitle: "Panel del PIB",
+    introBefore: "Explora indicadores económicos de",
+    sourceName: "Datos abiertos del Banco Mundial",
+    loading: "Cargando datos del panel…",
+    language: "Idioma",
+    indicator: "Indicador",
+    gdp: "PIB (US$ actuales)",
+    gdpPerCapita: "PIB per cápita (US$ actuales)",
+    realGDP: "PIB real (US$ constantes de 2015)",
+    region: "Región",
+    allRegions: "Todas las regiones",
+    incomeGroup: "Grupo de ingresos",
+    allIncomeGroups: "Todos los grupos de ingresos",
+    years: "Años",
+    from: "Desde",
+    to: "Hasta",
+    countries: "Países",
+    countryHint: "Los filtros limitan la lista de países, el mapa y los promedios por grupo. Usa Ctrl (Windows/Linux) o ⌘ (Mac) para seleccionar varios países.",
+    chartHeading: "{indicator} a lo largo del tiempo",
+    noGDPSelection: "No hay datos disponibles para esta selección.",
+    metricsHeading: "{indicator} en {year}",
+    growthUnavailable: "Crecimiento no disponible",
+    since: "{ratio}× desde {year}",
+    rankingHeading: "Clasificación de {indicator} en {year}",
+    rank: "Posición",
+    country: "País",
+    value: "Valor",
+    noValuesForYear: "No hay valores disponibles para este año.",
+    annualGrowth: "Crecimiento anual de {indicator} en {year}",
+    growth: "Crecimiento",
+    selectCountry: "Selecciona al menos un país.",
+    unavailable: "No disponible",
+    exportCSV: "Exportar datos visibles como CSV",
+    worldMap: "Mapa mundial: {indicator} en {year}",
+    mapAlt: "Mapa mundial de {indicator} en {year}",
+    lowest: "Más bajo",
+    middle: "Intermedio",
+    highest: "Más alto",
+    noData: "Sin datos",
+    comparisons: "Comparaciones por región y grupo de ingresos",
+    comparisonHint: "Los promedios incluyen países que coinciden con los filtros y tienen datos del indicador y año seleccionados.",
+    group: "Grupo",
+    average: "Promedio",
+    countriesCount: "Países",
+    countryName: "Nombre del país",
+    countryCode: "Código del país",
+    year: "Año",
+    chartAlt: "Valores de {indicator} desde {from} hasta {to}",
+    noIndicatorForYear: "No hay datos de {indicator} para {year}.",
+    unableToLoad: "No se pudieron cargar los datos del panel.",
+    missingSnapshots: "Faltan los datos de indicadores y del mapa. Ejecuta primero scripts/refresh-dashboard-data.mjs.",
+  },
+  fr: {
+    appTitle: "Tableau de bord du PIB",
+    introBefore: "Explorez les indicateurs économiques de",
+    sourceName: "Données ouvertes de la Banque mondiale",
+    loading: "Chargement des données du tableau de bord…",
+    language: "Langue",
+    indicator: "Indicateur",
+    gdp: "PIB (USD courants)",
+    gdpPerCapita: "PIB par habitant (USD courants)",
+    realGDP: "PIB réel (USD constants de 2015)",
+    region: "Région",
+    allRegions: "Toutes les régions",
+    incomeGroup: "Groupe de revenu",
+    allIncomeGroups: "Tous les groupes de revenu",
+    years: "Années",
+    from: "De",
+    to: "À",
+    countries: "Pays",
+    countryHint: "Les filtres réduisent la liste des pays, la carte et les moyennes par groupe. Utilisez Ctrl (Windows/Linux) ou ⌘ (Mac) pour sélectionner plusieurs pays.",
+    chartHeading: "{indicator} au fil du temps",
+    noGDPSelection: "Aucune donnée disponible pour cette sélection.",
+    metricsHeading: "{indicator} en {year}",
+    growthUnavailable: "Croissance indisponible",
+    since: "{ratio}× depuis {year}",
+    rankingHeading: "Classement du {indicator} en {year}",
+    rank: "Rang",
+    country: "Pays",
+    value: "Valeur",
+    noValuesForYear: "Aucune valeur disponible pour cette année.",
+    annualGrowth: "Croissance annuelle du {indicator} en {year}",
+    growth: "Croissance",
+    selectCountry: "Sélectionnez au moins un pays.",
+    unavailable: "Indisponible",
+    exportCSV: "Exporter les données visibles au format CSV",
+    worldMap: "Carte du monde : {indicator} en {year}",
+    mapAlt: "Carte mondiale du {indicator} en {year}",
+    lowest: "Le plus bas",
+    middle: "Moyen",
+    highest: "Le plus élevé",
+    noData: "Aucune donnée",
+    comparisons: "Comparaisons par région et groupe de revenu",
+    comparisonHint: "Les moyennes incluent les pays correspondant aux filtres et disposant de données pour l’indicateur et l’année choisis.",
+    group: "Groupe",
+    average: "Moyenne",
+    countriesCount: "Pays",
+    countryName: "Nom du pays",
+    countryCode: "Code du pays",
+    year: "Année",
+    chartAlt: "Valeurs du {indicator} de {from} à {to}",
+    noIndicatorForYear: "Aucune donnée de {indicator} n’est disponible pour {year}.",
+    unableToLoad: "Impossible de charger les données du tableau de bord.",
+    missingSnapshots: "Les données d’indicateurs et de carte sont manquantes. Exécutez d’abord scripts/refresh-dashboard-data.mjs.",
+  },
+} satisfies Record<Language, Record<string, string>>;
 
 interface IndicatorSnapshot {
   countries: Array<{
@@ -44,6 +207,14 @@ const colors = ["#3764d8", "#e05c42", "#14946b", "#9a56c4", "#da9b22", "#168eaa"
 const svgNamespace = "http://www.w3.org/2000/svg";
 const maximumChartPoints = 800;
 let yearIndexes = new Map<number, number>();
+let language: Language = "en";
+
+function message(key: keyof typeof translations.en, values: Record<string, string | number> = {}): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(new RegExp(`\\{${name}\\}`, "g"), String(value)),
+    translations[language][key],
+  );
+}
 
 async function* readCsvRows(response: Response): AsyncGenerator<string[], void, unknown> {
   const reader = response.body?.getReader();
@@ -171,15 +342,56 @@ function valueFor(country: Country, year: number, indicator: Indicator): number 
 }
 
 function indicatorName(indicator: Indicator): string {
-  return indicator === "gdpPerCapita" ? "GDP per capita" : indicator === "realGDP" ? "Real GDP" : "GDP";
+  return message(indicator);
 }
 
 function formatIndicator(value: number | undefined, indicator: Indicator): string {
-  if (value === undefined) return "N/A";
+  if (value === undefined) return message("unavailable");
+  const number = new Intl.NumberFormat(language, { maximumFractionDigits: 0 });
   if (indicator === "gdpPerCapita") {
-    return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    return new Intl.NumberFormat(language, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
   }
-  return `$${(value / 1e9).toLocaleString(undefined, { maximumFractionDigits: 0 })}B`;
+  return `$${number.format(value / 1e9)}B`;
+}
+
+function applyStaticTranslations(): void {
+  document.documentElement.lang = language;
+  document.title = message("appTitle");
+  element<HTMLHeadingElement>("app-title").textContent = `🌍 ${message("appTitle")}`;
+  element<HTMLSpanElement>("intro-before").textContent = message("introBefore");
+  element<HTMLAnchorElement>("data-source-link").textContent = message("sourceName");
+  element<HTMLDivElement>("status").textContent = message("loading");
+  element<HTMLSpanElement>("language-label").textContent = message("language");
+  element<HTMLSelectElement>("region-filter").options[0].textContent = message("allRegions");
+  element<HTMLSelectElement>("income-filter").options[0].textContent = message("allIncomeGroups");
+  element<HTMLSpanElement>("indicator-label").textContent = message("indicator");
+  const indicatorOptions = element<HTMLSelectElement>("indicator");
+  for (const indicator of ["gdp", "gdpPerCapita", "realGDP"] as const) {
+    const option = indicatorOptions.querySelector<HTMLOptionElement>(`option[value="${indicator}"]`);
+    if (option) option.textContent = message(indicator);
+  }
+  element<HTMLLabelElement>("region-label").textContent = message("region");
+  element<HTMLLabelElement>("income-label").textContent = message("incomeGroup");
+  element<HTMLDivElement>("years-label").textContent = message("years");
+  element<HTMLSpanElement>("from-label").textContent = message("from");
+  element<HTMLSpanElement>("to-label").textContent = message("to");
+  element<HTMLLabelElement>("countries-label").textContent = message("countries");
+  element<HTMLParagraphElement>("country-hint").textContent = message("countryHint");
+  element<HTMLButtonElement>("export-csv").textContent = message("exportCSV");
+  element<HTMLHeadingElement>("ranking-heading").textContent = message("rankingHeading", {
+    indicator: indicatorName(element<HTMLSelectElement>("indicator").value as Indicator),
+    year: element<HTMLInputElement>("to-year").value,
+  });
+  element<HTMLTableCellElement>("ranking-rank-heading").textContent = message("rank");
+  element<HTMLTableCellElement>("ranking-country-heading").textContent = message("country");
+  element<HTMLTableCellElement>("growth-country-heading").textContent = message("country");
+  element<HTMLTableCellElement>("growth-value-heading").textContent = message("growth");
+  element<HTMLHeadingElement>("map-heading").textContent = message("worldMap", {
+    indicator: indicatorName(element<HTMLSelectElement>("indicator").value as Indicator),
+    year: element<HTMLInputElement>("to-year").value,
+  });
+  element<HTMLHeadingElement>("comparison-heading").textContent = message("comparisons");
+  element<HTMLParagraphElement>("comparison-hint").textContent = message("comparisonHint");
 }
 
 function element<T extends HTMLElement>(id: string): T {
@@ -240,7 +452,9 @@ function pointsFor(country: Country, fromYear: number, toYear: number, indicator
 function renderChart(countries: Country[], fromYear: number, toYear: number, indicator: Indicator): void {
   const chartRoot = element<HTMLDivElement>("chart");
   const legendRoot = element<HTMLDivElement>("legend");
-  element<HTMLHeadingElement>("chart-heading").textContent = `${indicatorName(indicator)} over time`;
+  element<HTMLHeadingElement>("chart-heading").textContent = message("chartHeading", {
+    indicator: indicatorName(indicator),
+  });
   chartRoot.replaceChildren();
   legendRoot.replaceChildren();
 
@@ -250,7 +464,7 @@ function renderChart(countries: Country[], fromYear: number, toYear: number, ind
   if (series.length === 0) {
     const empty = document.createElement("p");
     empty.className = "empty";
-    empty.textContent = "No GDP data is available for this selection.";
+    empty.textContent = message("noGDPSelection");
     chartRoot.append(empty);
     return;
   }
@@ -272,7 +486,9 @@ function renderChart(countries: Country[], fromYear: number, toYear: number, ind
   svg.classList.add("chart");
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", `GDP by year from ${fromYear} through ${toYear}`);
+  svg.setAttribute("aria-label", message("chartAlt", {
+    indicator: indicatorName(indicator), from: fromYear, to: toYear,
+  }));
 
   for (let tick = 0; tick <= 4; tick += 1) {
     const y = top + (plotHeight * tick) / 4;
@@ -342,7 +558,9 @@ function renderChart(countries: Country[], fromYear: number, toYear: number, ind
 function renderMetrics(countries: Country[], fromYear: number, toYear: number, indicator: Indicator): void {
   const root = element<HTMLDivElement>("metrics");
   root.replaceChildren();
-  element<HTMLHeadingElement>("metrics-heading").textContent = `${indicatorName(indicator)} in ${toYear}`;
+  element<HTMLHeadingElement>("metrics-heading").textContent = message("metricsHeading", {
+    indicator: indicatorName(indicator), year: toYear,
+  });
 
   for (const country of countries) {
     const card = document.createElement("article");
@@ -359,9 +577,11 @@ function renderMetrics(countries: Country[], fromYear: number, toYear: number, i
     const initial = valueFor(country, fromYear, indicator);
     if (current === undefined || initial === undefined || initial === 0) {
       growth.classList.add("na");
-      growth.textContent = "Growth unavailable";
+      growth.textContent = message("growthUnavailable");
     } else {
-      growth.textContent = `${(current / initial).toFixed(2)}× since ${fromYear}`;
+      growth.textContent = message("since", {
+        ratio: (current / initial).toFixed(2), year: fromYear,
+      });
     }
     card.append(name, value, growth);
     root.append(card);
@@ -371,7 +591,9 @@ function renderMetrics(countries: Country[], fromYear: number, toYear: number, i
 function renderRankings(countries: Country[], toYear: number, indicator: Indicator): void {
   const root = element<HTMLTableSectionElement>("rankings");
   root.replaceChildren();
-  element<HTMLHeadingElement>("ranking-heading").textContent = `${indicatorName(indicator)} rankings in ${toYear}`;
+  element<HTMLHeadingElement>("ranking-heading").textContent = message("rankingHeading", {
+    indicator: indicatorName(indicator), year: toYear,
+  });
   element<HTMLTableCellElement>("ranking-value-heading").textContent = indicatorName(indicator);
   const ranked = countries
     .map((country) => ({ country, value: valueFor(country, toYear, indicator) }))
@@ -383,7 +605,7 @@ function renderRankings(countries: Country[], toYear: number, indicator: Indicat
     const cell = document.createElement("td");
     cell.colSpan = 3;
     cell.className = "missing";
-    cell.textContent = "No GDP values are available for this year.";
+    cell.textContent = message("noValuesForYear");
     row.append(cell);
     root.append(row);
     return;
@@ -406,14 +628,16 @@ function renderRankings(countries: Country[], toYear: number, indicator: Indicat
 function renderAnnualGrowth(countries: Country[], toYear: number, indicator: Indicator): void {
   const root = element<HTMLTableSectionElement>("annual-growth");
   root.replaceChildren();
-  element<HTMLHeadingElement>("growth-heading").textContent = `Annual ${indicatorName(indicator)} growth for ${toYear}`;
+  element<HTMLHeadingElement>("growth-heading").textContent = message("annualGrowth", {
+    indicator: indicatorName(indicator), year: toYear,
+  });
 
   if (countries.length === 0) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
     cell.colSpan = 2;
     cell.className = "missing";
-    cell.textContent = "Select at least one country.";
+    cell.textContent = message("selectCountry");
     row.append(cell);
     root.append(row);
     return;
@@ -429,7 +653,7 @@ function renderAnnualGrowth(countries: Country[], toYear: number, indicator: Ind
     growth.className = "numeric";
     if (current === undefined || previous === undefined || previous === 0) {
       growth.className += " missing";
-      growth.textContent = "Unavailable";
+      growth.textContent = message("unavailable");
     } else {
       growth.textContent = `${((current / previous - 1) * 100).toFixed(2)}%`;
     }
@@ -443,7 +667,9 @@ function exportVisibleCSV(countries: Country[], fromYear: number, toYear: number
     const text = String(value);
     return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
-  const rows: Array<Array<string | number>> = [["Country Name", "Country Code", "Year", indicatorName(indicator)]];
+  const rows: Array<Array<string | number>> = [
+    [message("countryName"), message("countryCode"), message("year"), indicatorName(indicator)],
+  ];
   const chunks: string[] = [];
   for (const country of countries) {
     for (let year = fromYear; year <= toYear; year += 1) {
@@ -465,6 +691,9 @@ function exportVisibleCSV(countries: Country[], fromYear: number, toYear: number
 }
 
 function renderMap(countries: Country[], map: MapData, year: number, indicator: Indicator): void {
+  element<HTMLHeadingElement>("map-heading").textContent = message("worldMap", {
+    indicator: indicatorName(indicator), year,
+  });
   const root = element<HTMLDivElement>("world-map");
   root.replaceChildren();
   const legend = element<HTMLDivElement>("map-legend");
@@ -486,7 +715,7 @@ function renderMap(countries: Country[], map: MapData, year: number, indicator: 
   svg.classList.add("world-map-svg");
   svg.setAttribute("viewBox", "0 0 1000 500");
   svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", `${indicatorName(indicator)} world map in ${year}`);
+  svg.setAttribute("aria-label", message("mapAlt", { indicator: indicatorName(indicator), year }));
   for (const feature of map.features) {
     const geometry = feature.geometry;
     if (!geometry) continue;
@@ -525,10 +754,10 @@ function renderMap(countries: Country[], map: MapData, year: number, indicator: 
   }
   root.append(svg);
   const legendItems = [
-    { color: palette[0], label: "Lowest" },
-    { color: palette[2], label: "Middle" },
-    { color: palette[4], label: "Highest" },
-    { color: "#e9edf2", label: "No data" },
+    { color: palette[0], label: message("lowest") },
+    { color: palette[2], label: message("middle") },
+    { color: palette[4], label: message("highest") },
+    { color: "#e9edf2", label: message("noData") },
   ];
   for (const entry of legendItems) {
     const item = document.createElement("span");
@@ -552,8 +781,8 @@ function renderComparisons(countries: Country[], year: number, indicator: Indica
     const value = valueFor(country, year, indicator);
     if (value === undefined) continue;
     for (const category of [
-      ["Region", country.region],
-      ["Income group", country.incomeLevel],
+      [message("region"), country.region],
+      [message("incomeGroup"), country.incomeLevel],
     ]) {
       if (!category[1]) continue;
       const key = `${category[0]}: ${category[1]}`;
@@ -564,7 +793,18 @@ function renderComparisons(countries: Country[], year: number, indicator: Indica
     }
   }
   const table = document.createElement("table");
-  table.innerHTML = "<thead><tr><th>Group</th><th class=\"numeric\">Average</th><th class=\"numeric\">Countries</th></tr></thead>";
+  const head = table.createTHead();
+  const headingRow = head.insertRow();
+  for (const [label, numeric] of [
+    [message("group"), false],
+    [message("average"), true],
+    [message("countriesCount"), true],
+  ] as const) {
+    const heading = document.createElement("th");
+    heading.textContent = label;
+    if (numeric) heading.className = "numeric";
+    headingRow.append(heading);
+  }
   const body = document.createElement("tbody");
   const rows = [...groups.entries()].sort(([left], [right]) => left.localeCompare(right));
   if (rows.length === 0) {
@@ -572,7 +812,7 @@ function renderComparisons(countries: Country[], year: number, indicator: Indica
     const cell = row.insertCell();
     cell.colSpan = 3;
     cell.className = "missing";
-    cell.textContent = `No ${indicatorName(indicator)} data is available for ${year}.`;
+    cell.textContent = message("noIndicatorForYear", { indicator: indicatorName(indicator), year });
   } else {
     for (const [label, group] of rows) {
       const row = body.insertRow();
@@ -603,6 +843,10 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
   const indicatorSelect = element<HTMLSelectElement>("indicator");
   const regionSelect = element<HTMLSelectElement>("region-filter");
   const incomeSelect = element<HTMLSelectElement>("income-filter");
+  const languageSelect = element<HTMLSelectElement>("language");
+  const requestedLanguage = new URLSearchParams(window.location.search).get("lang");
+  language = requestedLanguage === "es" || requestedLanguage === "fr" ? requestedLanguage : "en";
+  languageSelect.value = language;
   const minimum = Math.min(...years);
   const maximum = Math.max(...years);
   let visibleCountries: Country[] = [];
@@ -617,11 +861,12 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
   }
   from.value = String(minimum);
   to.value = String(maximum);
+  applyStaticTranslations();
 
-  const addFilterOptions = (filter: HTMLSelectElement, values: string[], label: string): void => {
+  const addFilterOptions = (filter: HTMLSelectElement, values: string[], allLabel: string): void => {
     const allOption = document.createElement("option");
     allOption.value = "";
-    allOption.textContent = `All ${label.toLowerCase()}s`;
+    allOption.textContent = allLabel;
     filter.append(allOption);
     for (const value of values) {
       const option = document.createElement("option");
@@ -630,8 +875,8 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
       filter.append(option);
     }
   };
-  addFilterOptions(regionSelect, [...new Set(countries.map(({ region }) => region).filter(Boolean))].sort(), "region");
-  addFilterOptions(incomeSelect, [...new Set(countries.map(({ incomeLevel }) => incomeLevel).filter(Boolean))].sort(), "income group");
+  addFilterOptions(regionSelect, [...new Set(countries.map(({ region }) => region).filter(Boolean))].sort(), message("allRegions"));
+  addFilterOptions(incomeSelect, [...new Set(countries.map(({ incomeLevel }) => incomeLevel).filter(Boolean))].sort(), message("allIncomeGroups"));
 
   const refreshCountryOptions = (preservedCodes?: Set<string>): void => {
     const available = countriesForFilters(countries, regionSelect.value, incomeSelect.value);
@@ -686,12 +931,27 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
   };
   regionSelect.addEventListener("change", filtersChanged);
   incomeSelect.addEventListener("change", filtersChanged);
+  languageSelect.addEventListener("change", () => {
+    const selectedLanguage = languageSelect.value;
+    if (selectedLanguage !== "en" && selectedLanguage !== "es" && selectedLanguage !== "fr") return;
+    language = selectedLanguage;
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", language);
+    window.history.replaceState(null, "", url);
+    applyStaticTranslations();
+    update();
+  });
   exportButton.addEventListener("click", () => exportVisibleCSV(visibleCountries, visibleFromYear, visibleToYear, visibleIndicator));
   update();
   element<HTMLDivElement>("dashboard").hidden = false;
 }
 
 async function start(): Promise<void> {
+  const requestedLanguage = new URLSearchParams(window.location.search).get("lang");
+  language = requestedLanguage === "es" || requestedLanguage === "fr" ? requestedLanguage : "en";
+  document.documentElement.lang = language;
+  document.title = message("appTitle");
+  element<HTMLDivElement>("status").textContent = message("loading");
   try {
     const response = await fetch("/data/gdp_data.csv");
     if (!response.ok) throw new Error(`The GDP dataset request failed (${response.status})`);
@@ -700,7 +960,7 @@ async function start(): Promise<void> {
       fetch("/data/world_countries.geojson"),
     ]);
     if (!snapshotResponse.ok || !mapResponse.ok) {
-      throw new Error("Indicator and map data are missing. Run scripts/refresh-dashboard-data.mjs first.");
+      throw new Error(message("missingSnapshots"));
     }
     const [snapshot, mapData] = await Promise.all([
       snapshotResponse.json() as Promise<IndicatorSnapshot>,
@@ -728,7 +988,7 @@ async function start(): Promise<void> {
   } catch (error) {
     const status = element<HTMLDivElement>("status");
     status.className = "error";
-    status.textContent = error instanceof Error ? error.message : "Unable to load GDP data";
+    status.textContent = error instanceof Error ? error.message : message("unableToLoad");
   }
 }
 

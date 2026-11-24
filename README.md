@@ -2,6 +2,8 @@
 
 A simple GDP dashboard with Python, TypeScript, and Go implementations. Each version reads the shared World Bank dataset in `data/gdp_data.csv`.
 
+See the [multilingual user manual](docs/user-manual.md) for English, Spanish, and French usage instructions.
+
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://gdp-dashboard-template.streamlit.app/)
 
 ## Python
@@ -75,6 +77,7 @@ Both non-Python dashboards provide:
 - GDP per capita (current US$) and inflation-adjusted GDP (constant 2015 US$)
 - A selected-year world map and region/income-group comparisons for the selected indicator
 - Interactive region and income-group filters that scope the country selector, map, and comparison averages
+- English, Spanish, and French interface localization for the TypeScript and Go dashboards
 
 ### Indicator and map data
 

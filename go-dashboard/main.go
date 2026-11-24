@@ -127,26 +127,183 @@ type yearLabel struct {
 }
 
 type pageData struct {
-	From           int
-	To             int
-	MinYear        int
-	MaxYear        int
-	Countries      []countryOption
-	Series         []chartSeries
-	Metrics        []metric
-	Grid           []gridLine
-	YearLabels     []yearLabel
-	Empty          bool
-	Rankings       []rankingRow
-	GrowthRows     []annualGrowthRow
-	Indicator      string
-	IndicatorLabel string
-	Region         string
-	IncomeGroup    string
-	Regions        []filterOption
-	IncomeGroups   []filterOption
-	MapCountries   []mapCountry
-	Comparisons    []comparisonRow
+	From            int
+	To              int
+	MinYear         int
+	MaxYear         int
+	Countries       []countryOption
+	Series          []chartSeries
+	Metrics         []metric
+	Grid            []gridLine
+	YearLabels      []yearLabel
+	Empty           bool
+	Rankings        []rankingRow
+	GrowthRows      []annualGrowthRow
+	Indicator       string
+	IndicatorLabel  string
+	Language        string
+	Text            uiText
+	ChartHeading    string
+	ChartAlt        string
+	MetricsHeading  string
+	RankingsHeading string
+	GrowthHeading   string
+	MapHeading      string
+	MapAlt          string
+	Region          string
+	IncomeGroup     string
+	Regions         []filterOption
+	IncomeGroups    []filterOption
+	MapCountries    []mapCountry
+	Comparisons     []comparisonRow
+}
+
+type uiText struct {
+	AppTitle          string
+	Intro             string
+	SourceName        string
+	Language          string
+	Indicator         string
+	GDP               string
+	GDPPerCapita      string
+	RealGDP           string
+	Region            string
+	AllRegions        string
+	IncomeGroup       string
+	AllIncomeGroups   string
+	Years             string
+	From              string
+	To                string
+	Countries         string
+	CountryHint       string
+	Update            string
+	NoDataSelection   string
+	ChartAlt          string
+	ChartHeading      string
+	MetricsHeading    string
+	RankingsHeading   string
+	GrowthHeading     string
+	GrowthUnavailable string
+	Rank              string
+	Country           string
+	CountryName       string
+	CountryCode       string
+	Year              string
+	Value             string
+	Growth            string
+	NoValuesForYear   string
+	SelectCountry     string
+	Unavailable       string
+	ExportCSV         string
+	MapHeading        string
+	MapAlt            string
+	MapTooltip        string
+	MapScaleHint      string
+	Lower             string
+	Middle            string
+	Higher            string
+	NoData            string
+	Comparisons       string
+	ComparisonHint    string
+	Group             string
+	Average           string
+	CountriesCount    string
+	MissingMapData    string
+}
+
+func translationsFor(language string) uiText {
+	switch language {
+	case "es":
+		return uiText{
+			AppTitle: "Panel del PIB", Intro: "Explora indicadores económicos de",
+			SourceName: "Datos abiertos del Banco Mundial", Language: "Idioma",
+			Indicator: "Indicador", GDP: "PIB (US$ actuales)",
+			GDPPerCapita: "PIB per cápita (US$ actuales)", RealGDP: "PIB real (US$ constantes de 2015)",
+			Region: "Región", AllRegions: "Todas las regiones",
+			IncomeGroup: "Grupo de ingresos", AllIncomeGroups: "Todos los grupos de ingresos",
+			Years: "Años", From: "Desde", To: "Hasta", Countries: "Países",
+			CountryHint: "Los filtros limitan la lista de países, el mapa y los promedios por grupo. Usa Ctrl (Windows/Linux) o ⌘ (Mac) para seleccionar varios países.",
+			Update:      "Actualizar panel", NoDataSelection: "No hay datos disponibles para esta selección.",
+			ChartAlt:          "Valores de {indicator} desde {from} hasta {to}",
+			ChartHeading:      "{indicator} a lo largo del tiempo",
+			MetricsHeading:    "{indicator} en {year}",
+			RankingsHeading:   "Clasificación de {indicator} en {year}",
+			GrowthHeading:     "Crecimiento anual de {indicator} en {year}",
+			GrowthUnavailable: "Crecimiento no disponible", Rank: "Posición", Country: "País",
+			CountryName: "Nombre del país", CountryCode: "Código del país", Year: "Año", Value: "Valor",
+			Growth: "Crecimiento", NoValuesForYear: "No hay valores disponibles para este año.",
+			SelectCountry: "Selecciona al menos un país.", Unavailable: "No disponible",
+			ExportCSV: "Exportar datos visibles como CSV", MapHeading: "Mapa mundial: {indicator} en {year}",
+			MapAlt: "Mapa mundial de {indicator} en {year}", Lower: "Más bajo", Middle: "Intermedio",
+			MapTooltip:   "{country}: {value} ({year})",
+			MapScaleHint: "Los valores se agrupan en quintiles.",
+			Higher:       "Más alto", NoData: "Sin datos",
+			Comparisons:    "Comparaciones por región y grupo de ingresos",
+			ComparisonHint: "Los promedios incluyen países que coinciden con los filtros y tienen datos del indicador y año seleccionados.",
+			Group:          "Grupo", Average: "Promedio", CountriesCount: "Países",
+			MissingMapData: "Ejecuta scripts/refresh-dashboard-data.mjs para cargar los datos del mapa.",
+		}
+	case "fr":
+		return uiText{
+			AppTitle: "Tableau de bord du PIB", Intro: "Explorez les indicateurs économiques de",
+			SourceName: "Données ouvertes de la Banque mondiale", Language: "Langue",
+			Indicator: "Indicateur", GDP: "PIB (USD courants)",
+			GDPPerCapita: "PIB par habitant (USD courants)", RealGDP: "PIB réel (USD constants de 2015)",
+			Region: "Région", AllRegions: "Toutes les régions",
+			IncomeGroup: "Groupe de revenu", AllIncomeGroups: "Tous les groupes de revenu",
+			Years: "Années", From: "De", To: "À", Countries: "Pays",
+			CountryHint: "Les filtres réduisent la liste des pays, la carte et les moyennes par groupe. Utilisez Ctrl (Windows/Linux) ou ⌘ (Mac) pour sélectionner plusieurs pays.",
+			Update:      "Actualiser le tableau", NoDataSelection: "Aucune donnée disponible pour cette sélection.",
+			ChartAlt:          "Valeurs du {indicator} de {from} à {to}",
+			ChartHeading:      "{indicator} au fil du temps",
+			MetricsHeading:    "{indicator} en {year}",
+			RankingsHeading:   "Classement du {indicator} en {year}",
+			GrowthHeading:     "Croissance annuelle du {indicator} en {year}",
+			GrowthUnavailable: "Croissance indisponible", Rank: "Rang", Country: "Pays",
+			CountryName: "Nom du pays", CountryCode: "Code du pays", Year: "Année", Value: "Valeur",
+			Growth: "Croissance", NoValuesForYear: "Aucune valeur disponible pour cette année.",
+			SelectCountry: "Sélectionnez au moins un pays.", Unavailable: "Indisponible",
+			ExportCSV: "Exporter les données visibles au format CSV", MapHeading: "Carte du monde : {indicator} en {year}",
+			MapAlt: "Carte mondiale du {indicator} en {year}", Lower: "Le plus bas", Middle: "Moyen",
+			MapTooltip:   "{country} : {value} ({year})",
+			MapScaleHint: "Les valeurs sont réparties en quintiles.",
+			Higher:       "Le plus élevé", NoData: "Aucune donnée",
+			Comparisons:    "Comparaisons par région et groupe de revenu",
+			ComparisonHint: "Les moyennes incluent les pays correspondant aux filtres et disposant de données pour l’indicateur et l’année choisis.",
+			Group:          "Groupe", Average: "Moyenne", CountriesCount: "Pays",
+			MissingMapData: "Exécutez scripts/refresh-dashboard-data.mjs pour charger les données cartographiques.",
+		}
+	default:
+		return uiText{
+			AppTitle: "GDP dashboard", Intro: "Explore economic indicators from",
+			SourceName: "World Bank Open Data", Language: "Language",
+			Indicator: "Indicator", GDP: "GDP (current US$)",
+			GDPPerCapita: "GDP per capita (current US$)", RealGDP: "Real GDP (constant 2015 US$)",
+			Region: "Region", AllRegions: "All regions",
+			IncomeGroup: "Income group", AllIncomeGroups: "All income groups",
+			Years: "Years", From: "From", To: "To", Countries: "Countries",
+			CountryHint: "Filters narrow the country list, map, and group averages. Use Ctrl (Windows/Linux) or ⌘ (Mac) to select multiple countries.",
+			Update:      "Update dashboard", NoDataSelection: "No data is available for this selection.",
+			ChartAlt:          "{indicator} values from {from} through {to}",
+			ChartHeading:      "{indicator} over time",
+			MetricsHeading:    "{indicator} in {year}",
+			RankingsHeading:   "{indicator} rankings in {year}",
+			GrowthHeading:     "Annual {indicator} growth for {year}",
+			GrowthUnavailable: "Growth unavailable", Rank: "Rank", Country: "Country",
+			CountryName: "Country Name", CountryCode: "Country Code", Year: "Year", Value: "Value",
+			Growth: "Growth", NoValuesForYear: "No values are available for this year.",
+			SelectCountry: "Select at least one country.", Unavailable: "Unavailable",
+			ExportCSV: "Export visible data as CSV", MapHeading: "World map: {indicator} in {year}",
+			MapAlt: "{indicator} world map in {year}", Lower: "Lower", Middle: "Middle",
+			MapTooltip:   "{country}: {value} ({year})",
+			MapScaleHint: "Values use quintile buckets.",
+			Higher:       "Higher", NoData: "No data",
+			Comparisons:    "Regional and income-group comparisons",
+			ComparisonHint: "Averages include countries matching the selected filters and with reported values for the selected indicator and year.",
+			Group:          "Group", Average: "Average", CountriesCount: "Countries",
+			MissingMapData: "Run scripts/refresh-dashboard-data.mjs to load map and indicator data.",
+		}
+	}
 }
 
 type comparisonRow struct {
@@ -220,11 +377,11 @@ func (cache *pageCache) put(key string, body []byte) {
 }
 
 const pageTemplate = `<!doctype html>
-<html lang="en">
+<html lang="{{.Language}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GDP dashboard — Go</title>
+  <title>{{.Text.AppTitle}} — Go</title>
   <style>
     :root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#172033;background:#f5f7fb;font-synthesis:none}
     *{box-sizing:border-box}body{margin:0}main{max-width:1160px;margin:0 auto;padding:40px 24px 64px}
@@ -248,37 +405,42 @@ const pageTemplate = `<!doctype html>
   </style>
 </head>
 <body><main>
-  <h1>🌍 GDP dashboard</h1>
-  <p class="intro">Explore economic indicators from <a href="https://data.worldbank.org/">World Bank Open Data</a>. Data spans {{.MinYear}}–{{.MaxYear}}; some countries have missing years.</p>
+  <h1>🌍 {{.Text.AppTitle}}</h1>
+  <p class="intro">{{.Text.Intro}} <a href="https://data.worldbank.org/">{{.Text.SourceName}}</a>.</p>
   <form method="get" class="panel controls">
-    <div><label for="indicator">Indicator</label><select id="indicator" name="indicator">
-      <option value="gdp" {{if eq .Indicator "gdp"}}selected{{end}}>GDP (current US$)</option>
-      <option value="gdpPerCapita" {{if eq .Indicator "gdpPerCapita"}}selected{{end}}>GDP per capita (current US$)</option>
-      <option value="realGDP" {{if eq .Indicator "realGDP"}}selected{{end}}>Real GDP (constant 2015 US$)</option>
+    <div><label for="language">{{.Text.Language}}</label><select id="language" name="language">
+      <option value="en" {{if eq .Language "en"}}selected{{end}}>English</option>
+      <option value="es" {{if eq .Language "es"}}selected{{end}}>Español</option>
+      <option value="fr" {{if eq .Language "fr"}}selected{{end}}>Français</option>
     </select></div>
-    <div><label for="region">Region</label><select id="region" name="region">
-      <option value="">All regions</option>
+    <div><label for="indicator">{{.Text.Indicator}}</label><select id="indicator" name="indicator">
+      <option value="gdp" {{if eq .Indicator "gdp"}}selected{{end}}>{{.Text.GDP}}</option>
+      <option value="gdpPerCapita" {{if eq .Indicator "gdpPerCapita"}}selected{{end}}>{{.Text.GDPPerCapita}}</option>
+      <option value="realGDP" {{if eq .Indicator "realGDP"}}selected{{end}}>{{.Text.RealGDP}}</option>
+    </select></div>
+    <div><label for="region">{{.Text.Region}}</label><select id="region" name="region">
+      <option value="">{{.Text.AllRegions}}</option>
       {{range .Regions}}<option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Value}}</option>{{end}}
     </select></div>
-    <div><label for="income">Income group</label><select id="income" name="income">
-      <option value="">All income groups</option>
+    <div><label for="income">{{.Text.IncomeGroup}}</label><select id="income" name="income">
+      <option value="">{{.Text.AllIncomeGroups}}</option>
       {{range .IncomeGroups}}<option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Value}}</option>{{end}}
     </select></div>
-    <div><div class="control-title">Years</div><div class="years">
-      <label class="year-field" for="from">From<input id="from" name="from" type="number" min="{{.MinYear}}" max="{{.MaxYear}}" value="{{.From}}"></label>
-      <label class="year-field" for="to">To<input id="to" name="to" type="number" min="{{.MinYear}}" max="{{.MaxYear}}" value="{{.To}}"></label>
+    <div><div class="control-title">{{.Text.Years}}</div><div class="years">
+      <label class="year-field" for="from">{{.Text.From}}<input id="from" name="from" type="number" min="{{.MinYear}}" max="{{.MaxYear}}" value="{{.From}}"></label>
+      <label class="year-field" for="to">{{.Text.To}}<input id="to" name="to" type="number" min="{{.MinYear}}" max="{{.MaxYear}}" value="{{.To}}"></label>
     </div></div>
-    <div><label for="countries">Countries</label>
+    <div><label for="countries">{{.Text.Countries}}</label>
       <select id="countries" name="country" multiple aria-describedby="country-hint">
         {{range .Countries}}<option value="{{.Code}}" {{if .Selected}}selected{{end}}>{{.Code}} — {{.Name}}</option>{{end}}
       </select>
-      <p class="hint" id="country-hint">Filters narrow the country list, map, and group averages. Use Ctrl (Windows/Linux) or ⌘ (Mac) to select multiple countries.</p>
-      <button type="submit">Update dashboard</button>
+      <p class="hint" id="country-hint">{{.Text.CountryHint}}</p>
+      <button type="submit">{{.Text.Update}}</button>
     </div>
   </form>
-  <h2>{{.IndicatorLabel}} over time</h2><section class="panel chart-wrap">
-    {{if .Empty}}<p class="empty">No GDP data is available for this selection.</p>{{else}}
-    <svg viewBox="0 0 1000 390" role="img" aria-label="GDP by year from {{.From}} through {{.To}}">
+  <h2>{{.ChartHeading}}</h2><section class="panel chart-wrap">
+    {{if .Empty}}<p class="empty">{{.Text.NoDataSelection}}</p>{{else}}
+    <svg viewBox="0 0 1000 390" role="img" aria-label="{{.ChartAlt}}">
       {{range .Grid}}<line class="grid-line" x1="76" x2="982" y1="{{.Y}}" y2="{{.Y}}"></line><text class="axis-label" x="66" y="{{add .Y 4}}" text-anchor="end">{{.Label}}</text>{{end}}
       {{range .YearLabels}}<text class="axis-label" x="{{.X}}" y="378" text-anchor="middle">{{.Year}}</text>{{end}}
       {{range .Series}}<polyline class="series-line" stroke="{{.Color}}" points="{{.Points}}"></polyline>{{end}}
@@ -286,24 +448,24 @@ const pageTemplate = `<!doctype html>
     <div class="legend">{{range .Series}}<span class="legend-item"><span class="swatch" style="background:{{.Color}}" aria-hidden="true"></span>{{.Code}}</span>{{end}}</div>
     {{end}}
   </section>
-  <h2>{{.IndicatorLabel}} in {{.To}}</h2><div class="metrics">{{range .Metrics}}
+  <h2>{{.MetricsHeading}}</h2><div class="metrics">{{range .Metrics}}
     <article class="metric"><div class="metric-code">{{.Code}} {{$.IndicatorLabel}}</div><div class="metric-value">{{.Value}}</div><div class="metric-growth">{{.Growth}}</div></article>
   {{end}}</div>
-  <div class="actions"><a class="export-button" href="/export.csv?from={{.From}}&to={{.To}}&amp;indicator={{.Indicator}}&amp;region={{.Region}}&amp;income={{.IncomeGroup}}{{range .Countries}}{{if .Selected}}&amp;country={{.Code}}{{end}}{{end}}">Export visible data as CSV</a></div>
+  <div class="actions"><a class="export-button" href="/export.csv?from={{.From}}&to={{.To}}&amp;indicator={{.Indicator}}&amp;region={{.Region}}&amp;income={{.IncomeGroup}}&amp;language={{.Language}}{{range .Countries}}{{if .Selected}}&amp;country={{.Code}}{{end}}{{end}}">{{.Text.ExportCSV}}</a></div>
   <div class="two-column">
-    <section><h2>{{.IndicatorLabel}} rankings in {{.To}}</h2><div class="panel"><table><thead><tr><th>Rank</th><th>Country</th><th class="numeric">Value</th></tr></thead><tbody>
-      {{range .Rankings}}<tr><td>{{.Rank}}</td><td>{{.Code}} — {{.Name}}</td><td class="numeric">{{.Value}}</td></tr>{{else}}<tr><td colspan="3" class="missing">No GDP values are available for this year.</td></tr>{{end}}
+    <section><h2>{{.RankingsHeading}}</h2><div class="panel"><table><thead><tr><th>{{.Text.Rank}}</th><th>{{.Text.Country}}</th><th class="numeric">{{.Text.Value}}</th></tr></thead><tbody>
+      {{range .Rankings}}<tr><td>{{.Rank}}</td><td>{{.Code}} — {{.Name}}</td><td class="numeric">{{.Value}}</td></tr>{{else}}<tr><td colspan="3" class="missing">{{$.Text.NoValuesForYear}}</td></tr>{{end}}
     </tbody></table></div></section>
-    <section><h2>Annual {{.IndicatorLabel}} growth for {{.To}}</h2><div class="panel"><table><thead><tr><th>Country</th><th class="numeric">Growth</th></tr></thead><tbody>
-      {{range .GrowthRows}}<tr><td>{{.Code}} — {{.Name}}</td><td class="numeric {{if eq .Growth "Unavailable"}}missing{{end}}">{{.Growth}}</td></tr>{{else}}<tr><td colspan="2" class="missing">Select at least one country.</td></tr>{{end}}
+    <section><h2>{{.GrowthHeading}}</h2><div class="panel"><table><thead><tr><th>{{.Text.Country}}</th><th class="numeric">{{.Text.Growth}}</th></tr></thead><tbody>
+      {{range .GrowthRows}}<tr><td>{{.Code}} — {{.Name}}</td><td class="numeric {{if eq .Growth $.Text.Unavailable}}missing{{end}}">{{.Growth}}</td></tr>{{else}}<tr><td colspan="2" class="missing">{{$.Text.SelectCountry}}</td></tr>{{end}}
     </tbody></table></div></section>
   </div>
-  <h2>World map: {{.IndicatorLabel}} in {{.To}}</h2><section class="panel chart-wrap"><svg viewBox="0 0 1000 500" role="img" aria-label="World map of {{.IndicatorLabel}} in {{.To}}">
-    {{range .MapCountries}}<path d="{{.Path}}" fill="{{.Fill}}" stroke="#fff" stroke-width="0.7"><title>{{.Title}}</title></path>{{else}}<text x="500" y="250" text-anchor="middle" fill="#758198">Run scripts/refresh-dashboard-data.mjs to load map and indicator data.</text>{{end}}
-  </svg><div class="legend"><span>Lower</span><span style="color:#6f9ed6">Middle</span><span style="color:#203f92">Higher</span><span style="color:#9aa3b0">No data</span><span>Values use quintile buckets.</span></div></section>
-  <h2>Region and income-group comparison</h2><p class="hint">Averages include countries matching the selected filters and with reported values for the selected indicator and year.</p>
-  <section class="panel"><table><thead><tr><th>Group</th><th class="numeric">Average</th><th class="numeric">Countries</th></tr></thead><tbody>
-    {{range .Comparisons}}<tr><td>{{.Group}}</td><td class="numeric">{{.Average}}</td><td class="numeric">{{.Count}}</td></tr>{{else}}<tr><td colspan="3" class="missing">No group values are available for this year.</td></tr>{{end}}
+  <h2>{{.MapHeading}}</h2><section class="panel chart-wrap"><svg viewBox="0 0 1000 500" role="img" aria-label="{{.MapAlt}}">
+    {{range .MapCountries}}<path d="{{.Path}}" fill="{{.Fill}}" stroke="#fff" stroke-width="0.7"><title>{{.Title}}</title></path>{{else}}<text x="500" y="250" text-anchor="middle" fill="#758198">{{.Text.MissingMapData}}</text>{{end}}
+  </svg><div class="legend"><span>{{.Text.Lower}}</span><span style="color:#6f9ed6">{{.Text.Middle}}</span><span style="color:#203f92">{{.Text.Higher}}</span><span style="color:#9aa3b0">{{.Text.NoData}}</span><span>{{.Text.MapScaleHint}}</span></div></section>
+  <h2>{{.Text.Comparisons}}</h2><p class="hint">{{.Text.ComparisonHint}}</p>
+  <section class="panel"><table><thead><tr><th>{{.Text.Group}}</th><th class="numeric">{{.Text.Average}}</th><th class="numeric">{{.Text.CountriesCount}}</th></tr></thead><tbody>
+    {{range .Comparisons}}<tr><td>{{.Group}}</td><td class="numeric">{{.Average}}</td><td class="numeric">{{.Count}}</td></tr>{{else}}<tr><td colspan="3" class="missing">{{$.Text.NoValuesForYear}}</td></tr>{{end}}
   </tbody></table></section>
 </main></body></html>`
 
@@ -523,15 +685,24 @@ func valueAt(dataset *Dataset, country Country, year int, indicator string) (flo
 	return dataset.gdpAt(country, year)
 }
 
-func indicatorTitle(indicator string) string {
+func indicatorTitle(indicator, language string) string {
+	text := translationsFor(language)
 	switch indicator {
 	case "gdpPerCapita":
-		return "GDP per capita"
+		return text.GDPPerCapita
 	case "realGDP":
-		return "Real GDP"
+		return text.RealGDP
 	default:
-		return "GDP"
+		return text.GDP
 	}
+}
+
+func localizedMessage(message string, replacements ...string) string {
+	pairs := make([]string, 0, len(replacements))
+	for index := 0; index+1 < len(replacements); index += 2 {
+		pairs = append(pairs, "{"+replacements[index]+"}", replacements[index+1])
+	}
+	return strings.NewReplacer(pairs...).Replace(message)
 }
 
 func formatValue(value float64, indicator string) string {
@@ -705,7 +876,12 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	if indicator != "gdpPerCapita" && indicator != "realGDP" {
 		indicator = "gdp"
 	}
-	indicatorLabel := indicatorTitle(indicator)
+	language := request.URL.Query().Get("language")
+	if language != "es" && language != "fr" {
+		language = "en"
+	}
+	text := translationsFor(language)
+	indicatorLabel := indicatorTitle(indicator, language)
 	region := request.URL.Query().Get("region")
 	incomeGroup := request.URL.Query().Get("income")
 	knownRegions := filterOptions(dataset.Countries, "", "", region)
@@ -747,8 +923,15 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 
 	page := pageData{
 		From: from, To: to, MinYear: minimum, MaxYear: maximum,
-		Indicator: indicator, IndicatorLabel: indicatorLabel,
-		Region: region, IncomeGroup: incomeGroup,
+		Indicator: indicator, IndicatorLabel: indicatorLabel, Language: language, Text: text,
+		ChartHeading:    localizedMessage(text.ChartHeading, "indicator", indicatorLabel),
+		ChartAlt:        localizedMessage(text.ChartAlt, "indicator", indicatorLabel, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
+		MetricsHeading:  localizedMessage(text.MetricsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		RankingsHeading: localizedMessage(text.RankingsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		GrowthHeading:   localizedMessage(text.GrowthHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		MapHeading:      localizedMessage(text.MapHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		MapAlt:          localizedMessage(text.MapAlt, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		Region:          region, IncomeGroup: incomeGroup,
 		Regions: knownRegions, IncomeGroups: knownIncomeGroups,
 		Countries:  make([]countryOption, 0, len(filteredCountries)),
 		Metrics:    make([]metric, 0, len(selected)),
@@ -818,7 +1001,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 			}
 			current, hasCurrent := valueAt(dataset, country, to, indicator)
 			initial, hasInitial := valueAt(dataset, country, from, indicator)
-			valueLabel, growth := "N/A", "Growth unavailable"
+			valueLabel, growth := "N/A", text.GrowthUnavailable
 			if hasCurrent {
 				valueLabel = formatValue(current, indicator)
 			}
@@ -835,7 +1018,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 			if hasCurrent {
 				valueLabel = formatValue(current, indicator)
 			}
-			page.Metrics = append(page.Metrics, metric{Code: code, Value: valueLabel, Growth: "Growth unavailable"})
+			page.Metrics = append(page.Metrics, metric{Code: code, Value: valueLabel, Growth: text.GrowthUnavailable})
 		}
 	}
 
@@ -867,7 +1050,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	}
 	for _, code := range selected {
 		country := dataset.ByCode[code]
-		growth := "Unavailable"
+		growth := text.Unavailable
 		current, hasCurrent := valueAt(dataset, country, to, indicator)
 		previous, hasPrevious := valueAt(dataset, country, to-1, indicator)
 		if hasCurrent && hasPrevious && previous != 0 {
@@ -888,7 +1071,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		if !exists {
 			continue
 		}
-		for _, label := range []string{"Region: " + country.Region, "Income group: " + country.IncomeLevel} {
+		for _, label := range []string{text.Region + ": " + country.Region, text.IncomeGroup + ": " + country.IncomeLevel} {
 			if strings.HasSuffix(label, ": ") {
 				continue
 			}
@@ -931,7 +1114,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 					bin++
 				}
 				fill = palette[bin]
-				title = country.Name + ": " + formatValue(value, indicator)
+				title = localizedMessage(text.MapTooltip, "country", country.Name, "value", formatValue(value, indicator), "year", strconv.Itoa(to))
 			}
 		}
 		if title == "" {
@@ -1048,12 +1231,17 @@ func run() error {
 		if indicator != "gdpPerCapita" && indicator != "realGDP" {
 			indicator = "gdp"
 		}
+		language := request.URL.Query().Get("language")
+		if language != "es" && language != "fr" {
+			language = "en"
+		}
+		text := translationsFor(language)
 		response.Header().Set("Content-Type", "text/csv; charset=utf-8")
 		response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s-%d-%d.csv\"", indicator, from, to))
 		response.Header().Set("X-Content-Type-Options", "nosniff")
 		response.Header().Set("Cache-Control", "no-store")
 		writer := csv.NewWriter(response)
-		_ = writer.Write([]string{"Country Name", "Country Code", "Year", indicatorTitle(indicator)})
+		_ = writer.Write([]string{text.CountryName, text.CountryCode, text.Year, indicatorTitle(indicator, language)})
 		for _, code := range selected {
 			country := dataset.ByCode[code]
 			if !countryMatchesFilters(country, region, incomeGroup) {

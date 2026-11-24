@@ -47,6 +47,9 @@ test("serves cached dashboard assets and streams the dataset", async (t) => {
   assert.ok(page, "dashboard server did not start");
   assert.equal(page.status, 200);
   const pageText = await page.text();
+  assert.match(pageText, /id="language"/);
+  assert.match(pageText, /Español/);
+  assert.match(pageText, /Français/);
   assert.match(pageText, /id="region-filter"/);
   assert.match(pageText, /id="income-filter"/);
   const pageTag = page.headers.get("etag");
@@ -58,7 +61,10 @@ test("serves cached dashboard assets and streams the dataset", async (t) => {
 
   const script = await fetch(`${base}/dashboard.js`);
   assert.equal(script.status, 200);
-  assert.match(await script.text(), /renderRankings/);
+  const scriptText = await script.text();
+  assert.match(scriptText, /renderRankings/);
+  assert.match(scriptText, /missingSnapshots/);
+  assert.match(scriptText, /languageSelect/);
 
   const dataset = await fetch(`${base}/data/gdp_data.csv`);
   assert.equal(dataset.status, 200);

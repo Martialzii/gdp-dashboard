@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -29,6 +31,36 @@ Missing Economy,MSE,GDP,,not-a-number
 	}
 	if got := []int{dataset.Years[0], dataset.Years[1]}; got[0] != 1960 || got[1] != 1961 {
 		t.Fatalf("unexpected years: %v", got)
+	}
+}
+
+func TestBuildPageRendersSpanishInterface(t *testing.T) {
+	dataset, err := loadDataset(strings.NewReader(`Country Name,Country Code,1960,1961
+Example,EXM,100,200
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest("GET", "/?from=1960&to=1961&country=EXM&language=es", nil)
+	page := buildPage(dataset, request)
+	if page.Language != "es" || page.Text.AppTitle != "Panel del PIB" ||
+		page.ChartHeading != "PIB (US$ actuales) a lo largo del tiempo" {
+		t.Fatalf("unexpected Spanish page strings: %+v", page)
+	}
+	tmpl, err := template.New("dashboard").Funcs(template.FuncMap{
+		"add": func(left, right float64) float64 { return left + right },
+	}).Parse(pageTemplate)
+	if err != nil {
+		t.Fatalf("parse dashboard template: %v", err)
+	}
+	var rendered bytes.Buffer
+	if err := tmpl.Execute(&rendered, page); err != nil {
+		t.Fatalf("render Spanish dashboard: %v", err)
+	}
+	for _, expected := range []string{`<html lang="es">`, "Panel del PIB", "Idioma", "Actualizar panel"} {
+		if !strings.Contains(rendered.String(), expected) {
+			t.Errorf("rendered Spanish page is missing %q", expected)
+		}
 	}
 }
 
