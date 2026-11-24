@@ -223,7 +223,7 @@ Outside,OTH,500,600
 	}
 	request := httptest.NewRequest("GET", "/?from=1960&to=1961&country=EXM&country=SEC&country=OTH&indicator=gdpPerCapita&region=East+Asia&income=High+income", nil)
 	page := buildPage(dataset, request)
-	if page.IndicatorLabel != "GDP per capita" || len(page.Rankings) != 2 || page.Rankings[0].Value != "$20" {
+	if page.IndicatorLabel != "GDP per capita (current US$)" || len(page.Rankings) != 2 || page.Rankings[0].Value != "$20" {
 		t.Fatalf("unexpected indicator rankings: %+v", page)
 	}
 	if page.Region != "East Asia" || page.IncomeGroup != "High income" || len(page.Countries) != 2 {
