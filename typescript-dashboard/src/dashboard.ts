@@ -589,12 +589,20 @@ function renderComparisons(countries: Country[], year: number, indicator: Indica
   root.append(table);
 }
 
+function countriesForFilters(countries: Country[], region: string, incomeLevel: string): Country[] {
+  return countries.filter((country) =>
+    (!region || country.region === region) && (!incomeLevel || country.incomeLevel === incomeLevel),
+  );
+}
+
 function initialize(countries: Country[], years: number[], mapData: MapData): void {
   const from = element<HTMLInputElement>("from-year");
   const to = element<HTMLInputElement>("to-year");
   const select = element<HTMLSelectElement>("countries");
   const exportButton = element<HTMLButtonElement>("export-csv");
   const indicatorSelect = element<HTMLSelectElement>("indicator");
+  const regionSelect = element<HTMLSelectElement>("region-filter");
+  const incomeSelect = element<HTMLSelectElement>("income-filter");
   const minimum = Math.min(...years);
   const maximum = Math.max(...years);
   let visibleCountries: Country[] = [];
@@ -610,13 +618,35 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
   from.value = String(minimum);
   to.value = String(maximum);
 
-  for (const country of countries) {
-    const option = document.createElement("option");
-    option.value = country.code;
-    option.textContent = `${country.code} — ${country.name}`;
-    option.selected = defaultCountries.includes(country.code);
-    select.append(option);
-  }
+  const addFilterOptions = (filter: HTMLSelectElement, values: string[], label: string): void => {
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = `All ${label.toLowerCase()}s`;
+    filter.append(allOption);
+    for (const value of values) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      filter.append(option);
+    }
+  };
+  addFilterOptions(regionSelect, [...new Set(countries.map(({ region }) => region).filter(Boolean))].sort(), "region");
+  addFilterOptions(incomeSelect, [...new Set(countries.map(({ incomeLevel }) => incomeLevel).filter(Boolean))].sort(), "income group");
+
+  const refreshCountryOptions = (preservedCodes?: Set<string>): void => {
+    const available = countriesForFilters(countries, regionSelect.value, incomeSelect.value);
+    select.replaceChildren();
+    for (const country of available) {
+      const option = document.createElement("option");
+      option.value = country.code;
+      option.textContent = `${country.code} — ${country.name}`;
+      option.selected = preservedCodes
+        ? preservedCodes.has(country.code)
+        : defaultCountries.includes(country.code);
+      select.append(option);
+    }
+  };
+  refreshCountryOptions();
 
   const update = (): void => {
     let fromYear = Number(from.value);
@@ -630,7 +660,8 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
     fromOutput.value = String(fromYear);
     toOutput.value = String(toYear);
     const selected = new Set(Array.from(select.selectedOptions, (option) => option.value));
-    const chosen = countries.filter(({ code }) => selected.has(code));
+    const filteredCountries = countriesForFilters(countries, regionSelect.value, incomeSelect.value);
+    const chosen = filteredCountries.filter(({ code }) => selected.has(code));
     const indicator = indicatorSelect.value as Indicator;
     visibleCountries = chosen;
     visibleFromYear = fromYear;
@@ -640,14 +671,21 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
     renderMetrics(chosen, fromYear, toYear, indicator);
     renderRankings(chosen, toYear, indicator);
     renderAnnualGrowth(chosen, toYear, indicator);
-    renderMap(countries, mapData, toYear, indicator);
-    renderComparisons(countries, toYear, indicator);
+    renderMap(filteredCountries, mapData, toYear, indicator);
+    renderComparisons(filteredCountries, toYear, indicator);
     exportButton.disabled = chosen.length === 0;
   };
   from.addEventListener("input", update);
   to.addEventListener("input", update);
   select.addEventListener("change", update);
   indicatorSelect.addEventListener("change", update);
+  const filtersChanged = (): void => {
+    const selectedCodes = new Set(Array.from(select.selectedOptions, (option) => option.value));
+    refreshCountryOptions(selectedCodes);
+    update();
+  };
+  regionSelect.addEventListener("change", filtersChanged);
+  incomeSelect.addEventListener("change", filtersChanged);
   exportButton.addEventListener("click", () => exportVisibleCSV(visibleCountries, visibleFromYear, visibleToYear, visibleIndicator));
   update();
   element<HTMLDivElement>("dashboard").hidden = false;

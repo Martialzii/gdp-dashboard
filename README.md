@@ -74,6 +74,7 @@ Both non-Python dashboards provide:
 - Explicit unavailable states for missing World Bank observations
 - GDP per capita (current US$) and inflation-adjusted GDP (constant 2015 US$)
 - A selected-year world map and region/income-group comparisons for the selected indicator
+- Interactive region and income-group filters that scope the country selector, map, and comparison averages
 
 ### Indicator and map data
 

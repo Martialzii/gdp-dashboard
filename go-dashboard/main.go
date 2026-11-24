@@ -92,6 +92,11 @@ type countryOption struct {
 	Selected bool
 }
 
+type filterOption struct {
+	Value    string
+	Selected bool
+}
+
 type metric struct {
 	Code   string
 	Value  string
@@ -136,6 +141,10 @@ type pageData struct {
 	GrowthRows     []annualGrowthRow
 	Indicator      string
 	IndicatorLabel string
+	Region         string
+	IncomeGroup    string
+	Regions        []filterOption
+	IncomeGroups   []filterOption
 	MapCountries   []mapCountry
 	Comparisons    []comparisonRow
 }
@@ -224,7 +233,7 @@ const pageTemplate = `<!doctype html>
     .controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;align-items:start}
     label,.control-title{font-weight:650;font-size:.94rem}.years{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
     .year-field{display:grid;gap:6px;color:#59667d;font-size:.84rem}input[type=number]{width:100%;padding:8px;border:1px solid #d5dce7;border-radius:8px}
-    select{width:100%;min-height:142px;margin-top:10px;padding:8px;border:1px solid #d5dce7;border-radius:9px;color:inherit;background:#fff}
+    select{width:100%;min-height:142px;margin-top:10px;padding:8px;border:1px solid #d5dce7;border-radius:9px;color:inherit;background:#fff}select:not([multiple]){min-height:44px}
     .hint{margin:7px 0 0;color:#738097;font-size:.8rem}button{margin-top:16px;padding:10px 18px;border:0;border-radius:8px;background:#3764d8;color:white;font:inherit;font-weight:650;cursor:pointer}
     h2{font-size:1.2rem;margin:32px 0 14px;letter-spacing:-.015em}.chart-wrap{overflow-x:auto}svg{display:block;width:100%;min-width:560px;height:auto}
     .grid-line{stroke:#e8edf4;stroke-width:1}.axis-label{fill:#758198;font-size:12px}.series-line{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
@@ -247,6 +256,14 @@ const pageTemplate = `<!doctype html>
       <option value="gdpPerCapita" {{if eq .Indicator "gdpPerCapita"}}selected{{end}}>GDP per capita (current US$)</option>
       <option value="realGDP" {{if eq .Indicator "realGDP"}}selected{{end}}>Real GDP (constant 2015 US$)</option>
     </select></div>
+    <div><label for="region">Region</label><select id="region" name="region">
+      <option value="">All regions</option>
+      {{range .Regions}}<option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Value}}</option>{{end}}
+    </select></div>
+    <div><label for="income">Income group</label><select id="income" name="income">
+      <option value="">All income groups</option>
+      {{range .IncomeGroups}}<option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Value}}</option>{{end}}
+    </select></div>
     <div><div class="control-title">Years</div><div class="years">
       <label class="year-field" for="from">From<input id="from" name="from" type="number" min="{{.MinYear}}" max="{{.MaxYear}}" value="{{.From}}"></label>
       <label class="year-field" for="to">To<input id="to" name="to" type="number" min="{{.MinYear}}" max="{{.MaxYear}}" value="{{.To}}"></label>
@@ -255,7 +272,7 @@ const pageTemplate = `<!doctype html>
       <select id="countries" name="country" multiple aria-describedby="country-hint">
         {{range .Countries}}<option value="{{.Code}}" {{if .Selected}}selected{{end}}>{{.Code}} — {{.Name}}</option>{{end}}
       </select>
-      <p class="hint" id="country-hint">Use Ctrl (Windows/Linux) or ⌘ (Mac) to select multiple countries.</p>
+      <p class="hint" id="country-hint">Filters narrow the country list, map, and group averages. Use Ctrl (Windows/Linux) or ⌘ (Mac) to select multiple countries.</p>
       <button type="submit">Update dashboard</button>
     </div>
   </form>
@@ -272,7 +289,7 @@ const pageTemplate = `<!doctype html>
   <h2>{{.IndicatorLabel}} in {{.To}}</h2><div class="metrics">{{range .Metrics}}
     <article class="metric"><div class="metric-code">{{.Code}} {{$.IndicatorLabel}}</div><div class="metric-value">{{.Value}}</div><div class="metric-growth">{{.Growth}}</div></article>
   {{end}}</div>
-  <div class="actions"><a class="export-button" href="/export.csv?from={{.From}}&to={{.To}}&amp;indicator={{.Indicator}}{{range .Countries}}{{if .Selected}}&amp;country={{.Code}}{{end}}{{end}}">Export visible data as CSV</a></div>
+  <div class="actions"><a class="export-button" href="/export.csv?from={{.From}}&to={{.To}}&amp;indicator={{.Indicator}}&amp;region={{.Region}}&amp;income={{.IncomeGroup}}{{range .Countries}}{{if .Selected}}&amp;country={{.Code}}{{end}}{{end}}">Export visible data as CSV</a></div>
   <div class="two-column">
     <section><h2>{{.IndicatorLabel}} rankings in {{.To}}</h2><div class="panel"><table><thead><tr><th>Rank</th><th>Country</th><th class="numeric">Value</th></tr></thead><tbody>
       {{range .Rankings}}<tr><td>{{.Rank}}</td><td>{{.Code}} — {{.Name}}</td><td class="numeric">{{.Value}}</td></tr>{{else}}<tr><td colspan="3" class="missing">No GDP values are available for this year.</td></tr>{{end}}
@@ -284,7 +301,7 @@ const pageTemplate = `<!doctype html>
   <h2>World map: {{.IndicatorLabel}} in {{.To}}</h2><section class="panel chart-wrap"><svg viewBox="0 0 1000 500" role="img" aria-label="World map of {{.IndicatorLabel}} in {{.To}}">
     {{range .MapCountries}}<path d="{{.Path}}" fill="{{.Fill}}" stroke="#fff" stroke-width="0.7"><title>{{.Title}}</title></path>{{else}}<text x="500" y="250" text-anchor="middle" fill="#758198">Run scripts/refresh-dashboard-data.mjs to load map and indicator data.</text>{{end}}
   </svg><div class="legend"><span>Lower</span><span style="color:#6f9ed6">Middle</span><span style="color:#203f92">Higher</span><span style="color:#9aa3b0">No data</span><span>Values use quintile buckets.</span></div></section>
-  <h2>Region and income-group comparison</h2><p class="hint">Averages include countries with reported values for the selected indicator and year.</p>
+  <h2>Region and income-group comparison</h2><p class="hint">Averages include countries matching the selected filters and with reported values for the selected indicator and year.</p>
   <section class="panel"><table><thead><tr><th>Group</th><th class="numeric">Average</th><th class="numeric">Countries</th></tr></thead><tbody>
     {{range .Comparisons}}<tr><td>{{.Group}}</td><td class="numeric">{{.Average}}</td><td class="numeric">{{.Count}}</td></tr>{{else}}<tr><td colspan="3" class="missing">No group values are available for this year.</td></tr>{{end}}
   </tbody></table></section>
@@ -631,6 +648,43 @@ func selectedCodes(query []string, dataset *Dataset) []string {
 	return selected
 }
 
+func countryMatchesFilters(country Country, region, incomeGroup string) bool {
+	return (region == "" || country.Region == region) &&
+		(incomeGroup == "" || country.IncomeLevel == incomeGroup)
+}
+
+func hasFilterOption(options []filterOption, selected string) bool {
+	for _, option := range options {
+		if option.Value == selected {
+			return true
+		}
+	}
+	return false
+}
+
+func filterOptions(countries []Country, region, incomeGroup, selected string) []filterOption {
+	values := make(map[string]bool)
+	for _, country := range countries {
+		value := country.Region
+		if incomeGroup != "" {
+			value = country.IncomeLevel
+		}
+		if value != "" {
+			values[value] = true
+		}
+	}
+	ordered := make([]string, 0, len(values))
+	for value := range values {
+		ordered = append(ordered, value)
+	}
+	sort.Strings(ordered)
+	options := make([]filterOption, 0, len(ordered))
+	for _, value := range ordered {
+		options = append(options, filterOption{Value: value, Selected: value == selected})
+	}
+	return options
+}
+
 func boundedYear(value string, fallback, minimum, maximum int) int {
 	year, err := strconv.Atoi(value)
 	if err != nil {
@@ -652,6 +706,22 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		indicator = "gdp"
 	}
 	indicatorLabel := indicatorTitle(indicator)
+	region := request.URL.Query().Get("region")
+	incomeGroup := request.URL.Query().Get("income")
+	knownRegions := filterOptions(dataset.Countries, "", "", region)
+	knownIncomeGroups := filterOptions(dataset.Countries, "", "income", incomeGroup)
+	if region != "" && !hasFilterOption(knownRegions, region) {
+		region = ""
+	}
+	if incomeGroup != "" && !hasFilterOption(knownIncomeGroups, incomeGroup) {
+		incomeGroup = ""
+	}
+	filteredCountries := make([]Country, 0, len(dataset.Countries))
+	for _, country := range dataset.Countries {
+		if countryMatchesFilters(country, region, incomeGroup) {
+			filteredCountries = append(filteredCountries, country)
+		}
+	}
 	from := boundedYear(request.URL.Query().Get("from"), minimum, minimum, maximum)
 	to := boundedYear(request.URL.Query().Get("to"), maximum, minimum, maximum)
 	if from > to {
@@ -663,6 +733,13 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		countryCodes = []string{"DEU", "FRA", "GBR", "BRA", "MEX", "JPN"}
 	}
 	selected := selectedCodes(countryCodes, dataset)
+	filteredSelected := make([]string, 0, len(selected))
+	for _, code := range selected {
+		if countryMatchesFilters(dataset.ByCode[code], region, incomeGroup) {
+			filteredSelected = append(filteredSelected, code)
+		}
+	}
+	selected = filteredSelected
 	selectedSet := make(map[string]bool, len(selected))
 	for _, code := range selected {
 		selectedSet[code] = true
@@ -671,12 +748,14 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	page := pageData{
 		From: from, To: to, MinYear: minimum, MaxYear: maximum,
 		Indicator: indicator, IndicatorLabel: indicatorLabel,
-		Countries:  make([]countryOption, 0, len(dataset.Countries)),
+		Region: region, IncomeGroup: incomeGroup,
+		Regions: knownRegions, IncomeGroups: knownIncomeGroups,
+		Countries:  make([]countryOption, 0, len(filteredCountries)),
 		Metrics:    make([]metric, 0, len(selected)),
 		Rankings:   make([]rankingRow, 0, len(selected)),
 		GrowthRows: make([]annualGrowthRow, 0, len(selected)),
 	}
-	for _, country := range dataset.Countries {
+	for _, country := range filteredCountries {
 		page.Countries = append(page.Countries, countryOption{
 			Code: country.Code, Name: country.Name, Selected: selectedSet[country.Code],
 		})
@@ -804,7 +883,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		total float64
 		count int
 	})
-	for _, country := range dataset.Countries {
+	for _, country := range filteredCountries {
 		value, exists := valueAt(dataset, country, to, indicator)
 		if !exists {
 			continue
@@ -845,7 +924,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	palette := []string{"#dce8f6", "#a9c5e8", "#6f9ed6", "#3764d8", "#203f92"}
 	for _, boundary := range dataset.Map {
 		fill, title := "#e9edf2", boundary.Title
-		if country, exists := dataset.ByCode[boundary.Code]; exists {
+		if country, exists := dataset.ByCode[boundary.Code]; exists && countryMatchesFilters(country, region, incomeGroup) {
 			if value, available := valueAt(dataset, country, to, indicator); available {
 				bin := 0
 				for bin < len(breaks) && value > breaks[bin] {
@@ -963,6 +1042,8 @@ func run() error {
 			from = to
 		}
 		selected := selectedCodes(request.URL.Query()["country"], dataset)
+		region := request.URL.Query().Get("region")
+		incomeGroup := request.URL.Query().Get("income")
 		indicator := request.URL.Query().Get("indicator")
 		if indicator != "gdpPerCapita" && indicator != "realGDP" {
 			indicator = "gdp"
@@ -975,6 +1056,9 @@ func run() error {
 		_ = writer.Write([]string{"Country Name", "Country Code", "Year", indicatorTitle(indicator)})
 		for _, code := range selected {
 			country := dataset.ByCode[code]
+			if !countryMatchesFilters(country, region, incomeGroup) {
+				continue
+			}
 			for year := from; year <= to; year++ {
 				value := ""
 				if observation, exists := valueAt(dataset, country, year, indicator); exists {

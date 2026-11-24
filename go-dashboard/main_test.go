@@ -161,13 +161,15 @@ func TestIndicatorSnapshotAddsPerCapitaMapAndGroupComparisons(t *testing.T) {
 	dataset, err := loadDataset(strings.NewReader(`Country Name,Country Code,1960,1961
 Example,EXM,100,200
 Second,SEC,300,400
+Outside,OTH,500,600
 `))
 	if err != nil {
 		t.Fatal(err)
 	}
 	snapshot := `{"countries":[
 		{"code":"EXM","region":"East Asia","incomeLevel":"High income","gdpPerCapita":{"1960":5,"1961":10},"realGDP":{"1960":50,"1961":100}},
-		{"code":"SEC","region":"East Asia","incomeLevel":"High income","gdpPerCapita":{"1960":15,"1961":20},"realGDP":{"1960":150,"1961":200}}
+		{"code":"SEC","region":"East Asia","incomeLevel":"High income","gdpPerCapita":{"1960":15,"1961":20},"realGDP":{"1960":150,"1961":200}},
+		{"code":"OTH","region":"Europe","incomeLevel":"Low income","gdpPerCapita":{"1960":25,"1961":30},"realGDP":{"1960":250,"1961":300}}
 	]}`
 	var boundaries strings.Builder
 	boundaries.WriteString(`{"type":"FeatureCollection","features":[`)
@@ -178,6 +180,8 @@ Second,SEC,300,400
 		code := fmt.Sprintf("C%02d", index)
 		if index == 0 {
 			code = "EXM"
+		} else if index == 1 {
+			code = "OTH"
 		}
 		fmt.Fprintf(&boundaries, `{"type":"Feature","properties":{"ISO_A3_EH":%q,"ADMIN":"Test"},"geometry":{"type":"Polygon","coordinates":[[[0,0],[1,0],[1,1],[0,0]]]}}`, code)
 	}
@@ -185,12 +189,21 @@ Second,SEC,300,400
 	if err := loadIndicatorData(dataset, strings.NewReader(snapshot), strings.NewReader(boundaries.String())); err != nil {
 		t.Fatal(err)
 	}
-	request := httptest.NewRequest("GET", "/?from=1960&to=1961&country=EXM&country=SEC&indicator=gdpPerCapita", nil)
+	request := httptest.NewRequest("GET", "/?from=1960&to=1961&country=EXM&country=SEC&country=OTH&indicator=gdpPerCapita&region=East+Asia&income=High+income", nil)
 	page := buildPage(dataset, request)
 	if page.IndicatorLabel != "GDP per capita" || len(page.Rankings) != 2 || page.Rankings[0].Value != "$20" {
 		t.Fatalf("unexpected indicator rankings: %+v", page)
 	}
+	if page.Region != "East Asia" || page.IncomeGroup != "High income" || len(page.Countries) != 2 {
+		t.Fatalf("region/income filters did not narrow the country selection: %+v", page)
+	}
+	if len(page.Regions) != 2 || len(page.IncomeGroups) != 2 {
+		t.Fatalf("expected all filter choices to remain available: regions=%+v income=%+v", page.Regions, page.IncomeGroups)
+	}
 	if len(page.MapCountries) != 100 || len(page.Comparisons) != 2 || page.Comparisons[0].Count != 2 {
 		t.Fatalf("indicator data was not used for map and group comparisons: map=%d groups=%+v", len(page.MapCountries), page.Comparisons)
+	}
+	if page.MapCountries[1].Code != "OTH" || page.MapCountries[1].Fill != "#e9edf2" {
+		t.Fatalf("map should show out-of-filter countries as no-data: %+v", page.MapCountries[1])
 	}
 }

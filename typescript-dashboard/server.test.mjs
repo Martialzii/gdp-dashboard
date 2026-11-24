@@ -46,6 +46,9 @@ test("serves cached dashboard assets and streams the dataset", async (t) => {
   }
   assert.ok(page, "dashboard server did not start");
   assert.equal(page.status, 200);
+  const pageText = await page.text();
+  assert.match(pageText, /id="region-filter"/);
+  assert.match(pageText, /id="income-filter"/);
   const pageTag = page.headers.get("etag");
   assert.ok(pageTag);
   assert.equal((await fetch(base, { headers: { "if-none-match": pageTag } })).status, 304);
