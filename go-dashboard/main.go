@@ -20,6 +20,8 @@ import (
 	"sync"
 )
 
+var appVersion = "1.0.1"
+
 type Country struct {
 	Code         string
 	Name         string
@@ -183,6 +185,7 @@ type uiText struct {
 	MetricsHeading    string
 	RankingsHeading   string
 	GrowthHeading     string
+	AnnualGrowthHint  string
 	GrowthUnavailable string
 	Rank              string
 	Country           string
@@ -229,6 +232,7 @@ func translationsFor(language string) uiText {
 			MetricsHeading:    "{indicator} en {year}",
 			RankingsHeading:   "Clasificación de {indicator} en {year}",
 			GrowthHeading:     "Crecimiento anual de {indicator} en {year}",
+			AnnualGrowthHint:  "Cambio porcentual interanual; el valor del año anterior es el denominador.",
 			GrowthUnavailable: "Crecimiento no disponible", Rank: "Posición", Country: "País",
 			CountryName: "Nombre del país", CountryCode: "Código del país", Year: "Año", Value: "Valor",
 			Growth: "Crecimiento", NoValuesForYear: "No hay valores disponibles para este año.",
@@ -259,6 +263,7 @@ func translationsFor(language string) uiText {
 			MetricsHeading:    "{indicator} en {year}",
 			RankingsHeading:   "Classement du {indicator} en {year}",
 			GrowthHeading:     "Croissance annuelle du {indicator} en {year}",
+			AnnualGrowthHint:  "Variation en pourcentage d'une année à l'autre ; la valeur de l'année précédente est le dénominateur.",
 			GrowthUnavailable: "Croissance indisponible", Rank: "Rang", Country: "Pays",
 			CountryName: "Nom du pays", CountryCode: "Code du pays", Year: "Année", Value: "Valeur",
 			Growth: "Croissance", NoValuesForYear: "Aucune valeur disponible pour cette année.",
@@ -289,6 +294,7 @@ func translationsFor(language string) uiText {
 			MetricsHeading:    "{indicator} in {year}",
 			RankingsHeading:   "{indicator} rankings in {year}",
 			GrowthHeading:     "Annual {indicator} growth for {year}",
+			AnnualGrowthHint:  "Year-over-year percent change, using the previous year's value as the denominator.",
 			GrowthUnavailable: "Growth unavailable", Rank: "Rank", Country: "Country",
 			CountryName: "Country Name", CountryCode: "Country Code", Year: "Year", Value: "Value",
 			Growth: "Growth", NoValuesForYear: "No values are available for this year.",
@@ -456,7 +462,7 @@ const pageTemplate = `<!doctype html>
     <section><h2>{{.RankingsHeading}}</h2><div class="panel"><table><thead><tr><th>{{.Text.Rank}}</th><th>{{.Text.Country}}</th><th class="numeric">{{.Text.Value}}</th></tr></thead><tbody>
       {{range .Rankings}}<tr><td>{{.Rank}}</td><td>{{.Code}} — {{.Name}}</td><td class="numeric">{{.Value}}</td></tr>{{else}}<tr><td colspan="3" class="missing">{{$.Text.NoValuesForYear}}</td></tr>{{end}}
     </tbody></table></div></section>
-    <section><h2>{{.GrowthHeading}}</h2><div class="panel"><table><thead><tr><th>{{.Text.Country}}</th><th class="numeric">{{.Text.Growth}}</th></tr></thead><tbody>
+    <section><h2>{{.GrowthHeading}}</h2><p class="hint">{{.Text.AnnualGrowthHint}}</p><div class="panel"><table><thead><tr><th>{{.Text.Country}}</th><th class="numeric">{{.Text.Growth}}</th></tr></thead><tbody>
       {{range .GrowthRows}}<tr><td>{{.Code}} — {{.Name}}</td><td class="numeric {{if eq .Growth $.Text.Unavailable}}missing{{end}}">{{.Growth}}</td></tr>{{else}}<tr><td colspan="2" class="missing">{{$.Text.SelectCountry}}</td></tr>{{end}}
     </tbody></table></div></section>
   </div>
@@ -1261,7 +1267,7 @@ func run() error {
 		}
 	})
 	address := "127.0.0.1:" + port
-	log.Printf("GDP dashboard listening at http://localhost:%s", port)
+	log.Printf("GDP dashboard v%s listening at http://localhost:%s", appVersion, port)
 	return http.ListenAndServe(address, mux)
 }
 

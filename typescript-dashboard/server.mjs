@@ -8,6 +8,7 @@ import path from "node:path";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const csvPath = path.join(root, "..", "data", "gdp_data.csv");
 const port = Number.parseInt(process.env.PORT ?? "3000", 10);
+const { version: appVersion } = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("PORT must be an integer between 1 and 65535");
@@ -126,5 +127,5 @@ server.on("error", (error) => {
   process.exitCode = 1;
 });
 server.listen(port, "127.0.0.1", () => {
-  console.log(`GDP dashboard listening at http://localhost:${port}`);
+  console.log(`GDP dashboard v${appVersion} listening at http://localhost:${port}`);
 });

@@ -26,6 +26,7 @@ Start either dashboard using the commands in the repository README, then open it
 ### Read the results
 
 - Missing observations are shown as unavailable and are not treated as zero.
+- Annual growth is year-over-year percent change: (current-year value − previous-year value) ÷ previous-year value × 100. Growth is unavailable when the previous year's value is missing or zero.
 - Map colors show relative quintile buckets among countries matching the active filters; gray means no reported value or a country outside the filters.
 - Region and income-group averages are unweighted averages of countries with data for that indicator and year, not population-weighted averages or regional totals.
 - GDP per capita is a current-US-dollar measure. Real GDP uses constant 2015 US dollars and adjusts for price changes over time.
@@ -54,6 +55,7 @@ Inicia uno de los paneles con los comandos del README del repositorio y abre su 
 ### Interpretación
 
 - Los datos ausentes se indican como no disponibles y no se convierten en cero.
+- El crecimiento anual es la variación porcentual interanual: (valor del año actual − valor del año anterior) ÷ valor del año anterior × 100. No está disponible si falta el valor del año anterior o es cero.
 - Los colores del mapa representan quintiles relativos entre los países que coinciden con los filtros; el gris indica que no hay datos o que el país queda fuera de los filtros.
 - Los promedios por región y grupo de ingresos son promedios simples de los países con datos para el indicador y año; no están ponderados por población ni son totales regionales.
 - El PIB per cápita está expresado en dólares actuales. El PIB real utiliza dólares constantes de 2015 y ajusta los cambios de precios a lo largo del tiempo.
@@ -82,6 +84,7 @@ Démarrez l’un des tableaux de bord avec les commandes indiquées dans le READ
 ### Interprétation
 
 - Les observations manquantes sont signalées comme indisponibles et ne sont pas assimilées à zéro.
+- La croissance annuelle est la variation en pourcentage d'une année à l'autre : (valeur de l'année en cours − valeur de l'année précédente) ÷ valeur de l'année précédente × 100. Elle est indisponible si la valeur de l'année précédente est absente ou nulle.
 - Les couleurs de la carte représentent des quintiles relatifs parmi les pays correspondant aux filtres actifs ; le gris indique une donnée absente ou un pays exclu par les filtres.
 - Les moyennes par région et groupe de revenu sont des moyennes simples des pays disposant de données pour l’indicateur et l’année choisis ; elles ne sont ni pondérées par la population ni des totaux régionaux.
 - Le PIB par habitant est exprimé en dollars courants. Le PIB réel utilise des dollars constants de 2015 et corrige les variations de prix au fil du temps.

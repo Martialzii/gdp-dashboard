@@ -2,6 +2,13 @@
 set -eu
 
 ROOT=$(CDPATH= cd "$(dirname "$0")/.." && pwd)
+build_version=$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/typescript-dashboard/package.json" | sed -n '1p')
+if [ -z "$build_version" ]; then
+  echo "Unable to read the dashboard build version." >&2
+  exit 1
+fi
+build_branch=$(git -C "$ROOT" branch --show-current 2>/dev/null || true)
+[ -n "$build_branch" ] || build_branch=unknown
 
 if [ "$#" -gt 1 ]; then
   echo "Usage: $0 [typescript|go|both]" >&2
@@ -54,7 +61,7 @@ setup_go() {
     return 1
   }
   mkdir -p "$ROOT/bin" || return 1
-  (cd "$ROOT" && go build -o "$ROOT/bin/gdp-dashboard" ./go-dashboard) || return 1
+  (cd "$ROOT" && go build -ldflags "-X main.appVersion=$build_version" -o "$ROOT/bin/gdp-dashboard" ./go-dashboard) || return 1
 }
 
 case "$choice" in
@@ -63,7 +70,8 @@ case "$choice" in
   both) setup_typescript && setup_go ;;
 esac
 
-printf '\nSetup complete. Start the selected dashboard with:\n'
+printf '\nBuild version: v%s (branch: %s)\n' "$build_version" "$build_branch"
+printf 'Setup complete. Start the selected dashboard with:\n'
 case "$choice" in
   typescript|both)
     printf '  cd typescript-dashboard && npm start  (http://localhost:3000)\n'

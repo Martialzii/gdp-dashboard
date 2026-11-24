@@ -57,10 +57,33 @@ Example,EXM,100,200
 	if err := tmpl.Execute(&rendered, page); err != nil {
 		t.Fatalf("render Spanish dashboard: %v", err)
 	}
-	for _, expected := range []string{`<html lang="es">`, "Panel del PIB", "Idioma", "Actualizar panel"} {
+	for _, expected := range []string{`<html lang="es">`, "Panel del PIB", "Idioma", "Actualizar panel", "el valor del año anterior es el denominador"} {
 		if !strings.Contains(rendered.String(), expected) {
 			t.Errorf("rendered Spanish page is missing %q", expected)
 		}
+	}
+}
+
+func TestAnnualGrowthUsesPreviousYearAsDenominator(t *testing.T) {
+	dataset, err := loadDataset(strings.NewReader(`Country Name,Country Code,1960,1961,1962
+Example,EXM,100,200,500
+Zero Baseline,ZER,100,0,50
+Missing Prior,MSP,100,,150
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest("GET", "/?from=1960&to=1962&country=EXM&country=ZER&country=MSP", nil)
+	page := buildPage(dataset, request)
+	growthByCode := make(map[string]string)
+	for _, row := range page.GrowthRows {
+		growthByCode[row.Code] = row.Growth
+	}
+	if growthByCode["EXM"] != "150.00%" {
+		t.Fatalf("growth should use 1961 as the denominator, got %q", growthByCode["EXM"])
+	}
+	if growthByCode["ZER"] != "Unavailable" || growthByCode["MSP"] != "Unavailable" {
+		t.Fatalf("zero or missing previous-year values should be unavailable: %+v", growthByCode)
 	}
 }
 

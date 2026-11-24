@@ -28,6 +28,15 @@ function Get-Tool([string]$Name) {
     return $tool.Source
 }
 
+$packagePath = Join-Path $root "typescript-dashboard\package.json"
+$buildVersion = (Get-Content -Raw -Path $packagePath | ConvertFrom-Json).version
+$gitCommand = Get-Command "git.exe" -ErrorAction SilentlyContinue
+$buildBranch = "unknown"
+if ($gitCommand) {
+    $branchName = & $gitCommand.Source -C $root branch --show-current
+    if ($branchName) { $buildBranch = $branchName }
+}
+
 function Invoke-TypeScriptSetup {
     $node = Get-Tool "node.exe"
     $npm = Get-Tool "npm.cmd"
@@ -56,7 +65,7 @@ function Invoke-GoSetup {
     New-Item -ItemType Directory -Force -Path $bin | Out-Null
     Push-Location $root
     try {
-        & $go build -o (Join-Path $bin "gdp-dashboard.exe") ./go-dashboard
+        & $go build -ldflags "-X main.appVersion=$buildVersion" -o (Join-Path $bin "gdp-dashboard.exe") ./go-dashboard
         if ($LASTEXITCODE -ne 0) { throw "The Go dashboard build failed." }
     }
     finally {
@@ -72,6 +81,7 @@ if ($Choice -eq "go" -or $Choice -eq "both") {
 }
 
 Write-Host ""
+Write-Host "Build version: v$buildVersion (branch: $buildBranch)"
 Write-Host "Setup complete. Start the selected dashboard with:"
 if ($Choice -eq "typescript" -or $Choice -eq "both") {
     Write-Host "  cd typescript-dashboard; npm start  (http://localhost:3000)"

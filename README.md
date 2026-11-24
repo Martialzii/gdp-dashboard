@@ -29,7 +29,7 @@ The equivalent PowerShell setup is also available as `.\scripts\setup.ps1`. On m
 sh ./scripts/setup.sh
 ```
 
-The setup scripts accept a choice to skip the prompt (`typescript`, `go`, or `both`). They check the required runtime, install/build only the selected implementation, and leave Python untouched. TypeScript setup requires Node.js 18+ and npm, runs `npm ci`, and builds the frontend; Go setup requires Go 1.21+ and builds a local binary in `bin/`. Install runtimes from [nodejs.org](https://nodejs.org/) and [go.dev/dl](https://go.dev/dl/).
+The setup scripts accept a choice to skip the prompt (`typescript`, `go`, or `both`). They check the required runtime, install/build only the selected implementation, and leave Python untouched. TypeScript setup requires Node.js 18+ and npm, runs `npm ci`, and builds the frontend; Go setup requires Go 1.21+ and builds a local binary in `bin/`. Install runtimes from [nodejs.org](https://nodejs.org/) and [go.dev/dl](https://go.dev/dl/). Each setup run prints the semantic version and current Git branch; this identifies the build without renaming branches or replacing earlier commits. The TypeScript package version is the shared source for setup output and Go binaries.
 
 ## TypeScript / JavaScript
 

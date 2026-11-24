@@ -47,6 +47,7 @@ const translations = {
     value: "Value",
     noValuesForYear: "No values are available for this year.",
     annualGrowth: "Annual {indicator} growth for {year}",
+    annualGrowthHint: "Year-over-year percent change, using the previous year's value as the denominator.",
     growth: "Growth",
     selectCountry: "Select at least one country.",
     unavailable: "Unavailable",
@@ -100,6 +101,7 @@ const translations = {
     value: "Valor",
     noValuesForYear: "No hay valores disponibles para este año.",
     annualGrowth: "Crecimiento anual de {indicator} en {year}",
+    annualGrowthHint: "Cambio porcentual interanual; el valor del año anterior es el denominador.",
     growth: "Crecimiento",
     selectCountry: "Selecciona al menos un país.",
     unavailable: "No disponible",
@@ -153,6 +155,7 @@ const translations = {
     value: "Valeur",
     noValuesForYear: "Aucune valeur disponible pour cette année.",
     annualGrowth: "Croissance annuelle du {indicator} en {year}",
+    annualGrowthHint: "Variation en pourcentage d'une année à l'autre ; la valeur de l'année précédente est le dénominateur.",
     growth: "Croissance",
     selectCountry: "Sélectionnez au moins un pays.",
     unavailable: "Indisponible",
@@ -386,6 +389,7 @@ function applyStaticTranslations(): void {
   element<HTMLTableCellElement>("ranking-country-heading").textContent = message("country");
   element<HTMLTableCellElement>("growth-country-heading").textContent = message("country");
   element<HTMLTableCellElement>("growth-value-heading").textContent = message("growth");
+  element<HTMLParagraphElement>("annual-growth-hint").textContent = message("annualGrowthHint");
   element<HTMLHeadingElement>("map-heading").textContent = message("worldMap", {
     indicator: indicatorName(element<HTMLSelectElement>("indicator").value as Indicator),
     year: element<HTMLInputElement>("to-year").value,
