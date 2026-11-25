@@ -20,7 +20,7 @@ import (
 	"sync"
 )
 
-var appVersion = "1.2.0"
+var appVersion = "1.3.0"
 
 type Country struct {
 	Code         string

@@ -31,6 +31,17 @@ sh ./scripts/setup.sh
 
 The setup scripts accept a choice to skip the prompt (`typescript`, `go`, or `both`). They check the required runtime, install/build only the selected implementation, and leave Python untouched. TypeScript setup requires Node.js 18+ and npm, runs `npm ci`, and builds the frontend; Go setup requires Go 1.21+ and builds a local binary in `bin/`. Install runtimes from [nodejs.org](https://nodejs.org/) and [go.dev/dl](https://go.dev/dl/). Each setup run prints the semantic version and current Git branch; this identifies the build without renaming branches or replacing earlier commits. The TypeScript package version is the shared source for setup output and Go binaries.
 
+### Install an independent branch
+
+Use the branch installer to build the current checkout without fetching GitHub, or install a remote branch into its own directory with a shallow, single-branch clone:
+
+```sh
+node scripts/install-branch.mjs
+node scripts/install-branch.mjs --branch martialzii-gdp-growth-trends --implementation both
+```
+
+The interactive installer lets you choose `typescript`, `go`, or `both`. Remote branches are placed under `~/.gdp-dashboard/<branch>` (or `%USERPROFILE%\.gdp-dashboard\<branch>` on Windows); existing directories are never overwritten. `--destination <path>` selects a different new directory. Use `--dry-run` to preview a selection without cloning or installing. World Bank and Natural Earth data refresh is opt-in with `--refresh-data`; otherwise bundled snapshots are reused, avoiding those provider/API calls. TypeScript dependencies use npm's offline cache when available and disable audit requests. Python is not installed or changed.
+
 ## TypeScript / JavaScript
 
 Requires Node.js 18 or newer. To install and run it manually from the repository root:
@@ -45,7 +56,7 @@ npm start
 
 Open [http://localhost:3000](http://localhost:3000). Set `PORT` to use a different port.
 
-Run the TypeScript build, server checks, and fixture-based refresh tests with `cd typescript-dashboard && npm test`.
+Run the TypeScript build, server checks, fixture-based refresh tests, and installer option tests with `cd typescript-dashboard && npm test`.
 
 ## Go
 
