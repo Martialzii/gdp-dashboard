@@ -48,6 +48,10 @@ const translations = {
     noValuesForYear: "No values are available for this year.",
     annualGrowth: "Annual {indicator} growth for {year}",
     annualGrowthHint: "Year-over-year percent change, using the previous year's value as the denominator.",
+    growthTrend: "Year-over-year growth trend",
+    growthTrendHint: "Each column shows annual percent change for that year, calculated against the previous calendar year.",
+    cumulativeGrowth: "Cumulative change ({from}–{to})",
+    cumulativeGrowthHint: "Percent change from the selected start year to the end year, using the start-year value as the denominator.",
     growth: "Growth",
     selectCountry: "Select at least one country.",
     unavailable: "Unavailable",
@@ -102,6 +106,10 @@ const translations = {
     noValuesForYear: "No hay valores disponibles para este año.",
     annualGrowth: "Crecimiento anual de {indicator} en {year}",
     annualGrowthHint: "Cambio porcentual interanual; el valor del año anterior es el denominador.",
+    growthTrend: "Tendencia del crecimiento interanual",
+    growthTrendHint: "Cada columna muestra la variación porcentual anual respecto al año calendario anterior.",
+    cumulativeGrowth: "Variación acumulada ({from}–{to})",
+    cumulativeGrowthHint: "Cambio porcentual desde el año inicial hasta el año final, usando el valor del año inicial como denominador.",
     growth: "Crecimiento",
     selectCountry: "Selecciona al menos un país.",
     unavailable: "No disponible",
@@ -156,6 +164,10 @@ const translations = {
     noValuesForYear: "Aucune valeur disponible pour cette année.",
     annualGrowth: "Croissance annuelle du {indicator} en {year}",
     annualGrowthHint: "Variation en pourcentage d'une année à l'autre ; la valeur de l'année précédente est le dénominateur.",
+    growthTrend: "Tendance de la croissance annuelle",
+    growthTrendHint: "Chaque colonne indique la variation annuelle en pourcentage par rapport à l'année civile précédente.",
+    cumulativeGrowth: "Variation cumulée ({from}–{to})",
+    cumulativeGrowthHint: "Variation en pourcentage entre les années de début et de fin, avec la valeur de l'année de début comme dénominateur.",
     growth: "Croissance",
     selectCountry: "Sélectionnez au moins un pays.",
     unavailable: "Indisponible",
@@ -390,6 +402,10 @@ function applyStaticTranslations(): void {
   element<HTMLTableCellElement>("growth-country-heading").textContent = message("country");
   element<HTMLTableCellElement>("growth-value-heading").textContent = message("growth");
   element<HTMLParagraphElement>("annual-growth-hint").textContent = message("annualGrowthHint");
+  element<HTMLHeadingElement>("growth-trend-heading").textContent = message("growthTrend");
+  element<HTMLParagraphElement>("growth-trend-hint").textContent = message("growthTrendHint");
+  element<HTMLHeadingElement>("cumulative-growth-heading").textContent = message("cumulativeGrowth");
+  element<HTMLParagraphElement>("cumulative-growth-hint").textContent = message("cumulativeGrowthHint");
   element<HTMLHeadingElement>("map-heading").textContent = message("worldMap", {
     indicator: indicatorName(element<HTMLSelectElement>("indicator").value as Indicator),
     year: element<HTMLInputElement>("to-year").value,
@@ -666,6 +682,91 @@ function renderAnnualGrowth(countries: Country[], toYear: number, indicator: Ind
   });
 }
 
+function renderGrowthTrend(countries: Country[], fromYear: number, toYear: number, indicator: Indicator): void {
+  const head = element<HTMLTableSectionElement>("growth-trend-head");
+  const body = element<HTMLTableSectionElement>("growth-trend-body");
+  head.replaceChildren();
+  body.replaceChildren();
+
+  const header = document.createElement("tr");
+  const countryHeading = document.createElement("th");
+  countryHeading.textContent = message("country");
+  header.append(countryHeading);
+  for (let year = fromYear; year <= toYear; year++) {
+    const cell = document.createElement("th");
+    cell.className = "numeric";
+    cell.textContent = String(year);
+    header.append(cell);
+  }
+  head.append(header);
+
+  if (countries.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = toYear - fromYear + 2;
+    cell.className = "missing";
+    cell.textContent = message("selectCountry");
+    row.append(cell);
+    body.append(row);
+    return;
+  }
+
+  for (const country of countries) {
+    const row = document.createElement("tr");
+    const countryCell = document.createElement("td");
+    countryCell.textContent = `${country.code} — ${country.name}`;
+    row.append(countryCell);
+    for (let year = fromYear; year <= toYear; year++) {
+      const current = valueFor(country, year, indicator);
+      const previous = valueFor(country, year - 1, indicator);
+      const cell = document.createElement("td");
+      cell.className = "numeric";
+      if (current === undefined || previous === undefined || previous === 0) {
+        cell.classList.add("missing");
+        cell.textContent = message("unavailable");
+      } else {
+        cell.textContent = `${((current / previous - 1) * 100).toFixed(2)}%`;
+      }
+      row.append(cell);
+    }
+    body.append(row);
+  }
+}
+
+function renderCumulativeGrowth(countries: Country[], fromYear: number, toYear: number, indicator: Indicator): void {
+  element<HTMLHeadingElement>("cumulative-growth-heading").textContent = message("cumulativeGrowth", {
+    from: fromYear, to: toYear,
+  });
+  const root = element<HTMLTableSectionElement>("cumulative-growth");
+  root.replaceChildren();
+  for (const country of countries) {
+    const start = valueFor(country, fromYear, indicator);
+    const end = valueFor(country, toYear, indicator);
+    const row = document.createElement("tr");
+    const countryCell = document.createElement("td");
+    countryCell.textContent = `${country.code} — ${country.name}`;
+    const change = document.createElement("td");
+    change.className = "numeric";
+    if (start === undefined || end === undefined || start === 0) {
+      change.classList.add("missing");
+      change.textContent = message("unavailable");
+    } else {
+      change.textContent = `${((end / start - 1) * 100).toFixed(2)}%`;
+    }
+    row.append(countryCell, change);
+    root.append(row);
+  }
+  if (countries.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 2;
+    cell.className = "missing";
+    cell.textContent = message("selectCountry");
+    row.append(cell);
+    root.append(row);
+  }
+}
+
 function exportVisibleCSV(countries: Country[], fromYear: number, toYear: number, indicator: Indicator): void {
   const escapeCSV = (value: string | number): string => {
     const text = String(value);
@@ -920,6 +1021,8 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
     renderMetrics(chosen, fromYear, toYear, indicator);
     renderRankings(chosen, toYear, indicator);
     renderAnnualGrowth(chosen, toYear, indicator);
+    renderGrowthTrend(chosen, fromYear, toYear, indicator);
+    renderCumulativeGrowth(chosen, fromYear, toYear, indicator);
     renderMap(filteredCountries, mapData, toYear, indicator);
     renderComparisons(filteredCountries, toYear, indicator);
     exportButton.disabled = chosen.length === 0;

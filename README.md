@@ -71,6 +71,7 @@ Both non-Python dashboards provide:
 - Country and year selection
 - GDP-over-time chart
 - GDP summaries and annual growth
+- Multi-year year-over-year growth trends and start-to-end cumulative change
 - GDP rankings for the selected end year
 - CSV export of the visible country/year selection
 - Explicit unavailable states for missing World Bank observations

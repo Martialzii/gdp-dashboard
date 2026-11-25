@@ -57,7 +57,11 @@ Example,EXM,100,200
 	if err := tmpl.Execute(&rendered, page); err != nil {
 		t.Fatalf("render Spanish dashboard: %v", err)
 	}
-	for _, expected := range []string{`<html lang="es">`, "Panel del PIB", "Idioma", "Actualizar panel", "el valor del año anterior es el denominador"} {
+	for _, expected := range []string{
+		`<html lang="es">`, "Panel del PIB", "Idioma", "Actualizar panel",
+		"el valor del año anterior es el denominador", "Tendencia del crecimiento interanual",
+		"Variación acumulada (1960–1961)", "100.00%",
+	} {
 		if !strings.Contains(rendered.String(), expected) {
 			t.Errorf("rendered Spanish page is missing %q", expected)
 		}
@@ -69,11 +73,13 @@ func TestAnnualGrowthUsesPreviousYearAsDenominator(t *testing.T) {
 Example,EXM,100,200,500
 Zero Baseline,ZER,100,0,50
 Missing Prior,MSP,100,,150
+Missing Start,MSE,,100,150
+Zero Start,ZST,0,100,150
 `))
 	if err != nil {
 		t.Fatal(err)
 	}
-	request := httptest.NewRequest("GET", "/?from=1960&to=1962&country=EXM&country=ZER&country=MSP", nil)
+	request := httptest.NewRequest("GET", "/?from=1960&to=1962&country=EXM&country=ZER&country=MSP&country=MSE&country=ZST", nil)
 	page := buildPage(dataset, request)
 	growthByCode := make(map[string]string)
 	for _, row := range page.GrowthRows {
@@ -84,6 +90,31 @@ Missing Prior,MSP,100,,150
 	}
 	if growthByCode["ZER"] != "Unavailable" || growthByCode["MSP"] != "Unavailable" {
 		t.Fatalf("zero or missing previous-year values should be unavailable: %+v", growthByCode)
+	}
+	if len(page.GrowthYears) != 3 || page.GrowthYears[0] != 1960 || page.GrowthYears[2] != 1962 {
+		t.Fatalf("unexpected growth trend years: %+v", page.GrowthYears)
+	}
+	trendByCode := make(map[string][]string)
+	for _, row := range page.GrowthTrendRows {
+		trendByCode[row.Code] = row.Values
+	}
+	if got := strings.Join(trendByCode["EXM"], ","); got != "Unavailable,100.00%,150.00%" {
+		t.Fatalf("unexpected year-over-year trend values for EXM: %s", got)
+	}
+	if got := strings.Join(trendByCode["ZER"], ","); got != "Unavailable,-100.00%,Unavailable" {
+		t.Fatalf("zero prior-year observation should make the next trend value unavailable: %s", got)
+	}
+	if got := strings.Join(trendByCode["MSP"], ","); got != "Unavailable,Unavailable,Unavailable" {
+		t.Fatalf("missing observations should remain unavailable in trend: %s", got)
+	}
+	cumulativeByCode := make(map[string]string)
+	for _, row := range page.CumulativeGrowthRows {
+		cumulativeByCode[row.Code] = row.Change
+	}
+	if cumulativeByCode["EXM"] != "400.00%" || cumulativeByCode["ZER"] != "-50.00%" ||
+		cumulativeByCode["MSP"] != "50.00%" || cumulativeByCode["MSE"] != "Unavailable" ||
+		cumulativeByCode["ZST"] != "Unavailable" {
+		t.Fatalf("unexpected cumulative change values: %+v", cumulativeByCode)
 	}
 }
 
