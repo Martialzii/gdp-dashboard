@@ -54,6 +54,8 @@ test("serves cached dashboard assets and streams the dataset", async (t) => {
   assert.match(pageText, /id="income-filter"/);
   assert.match(pageText, /id="growth-trend-body"/);
   assert.match(pageText, /id="cumulative-growth"/);
+  assert.match(pageText, /id="growth-rankings"/);
+  assert.match(pageText, /id="cagr"/);
   const pageTag = page.headers.get("etag");
   assert.ok(pageTag);
   assert.equal((await fetch(base, { headers: { "if-none-match": pageTag } })).status, 304);
@@ -67,6 +69,10 @@ test("serves cached dashboard assets and streams the dataset", async (t) => {
   assert.match(scriptText, /renderRankings/);
   assert.match(scriptText, /renderGrowthTrend/);
   assert.match(scriptText, /renderCumulativeGrowth/);
+  assert.match(scriptText, /renderGrowthRankings/);
+  assert.match(scriptText, /renderCAGR/);
+  assert.match(scriptText, /Countries are ranked highest first/);
+  assert.match(scriptText, /elapsed years/);
   assert.match(scriptText, /missingSnapshots/);
   assert.match(scriptText, /languageSelect/);
 

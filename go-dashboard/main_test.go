@@ -61,6 +61,8 @@ Example,EXM,100,200
 		`<html lang="es">`, "Panel del PIB", "Idioma", "Actualizar panel",
 		"el valor del año anterior es el denominador", "Tendencia del crecimiento interanual",
 		"Variación acumulada (1960–1961)", "100.00%",
+		"Clasificación del crecimiento anual", "Tasa de crecimiento anual compuesta (CAGR)",
+		"años transcurridos", "No está disponible si falta un extremo",
 	} {
 		if !strings.Contains(rendered.String(), expected) {
 			t.Errorf("rendered Spanish page is missing %q", expected)
@@ -168,6 +170,62 @@ Missing Economy,MSE,,100,
 	}
 	if growthByCode["FRA"] != "50.00%" || growthByCode["DEU"] != "-100.00%" || growthByCode["MSE"] != "Unavailable" {
 		t.Fatalf("unexpected annual growth: %+v", growthByCode)
+	}
+}
+
+func TestBuildPageRanksAnnualGrowthAndCalculatesCAGR(t *testing.T) {
+	dataset, err := loadDataset(strings.NewReader(`Country Name,Country Code,1960,1961,1962
+Zeta,ZET,100,200,400
+Alpha,ALP,100,150,225
+Beta,BET,100,150,225
+Missing Prior,MPR,100,,200
+Missing End,MSE,100,150,
+Missing Start,MST,,150,225
+Zero Start,ZST,0,0,20
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest("GET", "/?from=1960&to=1962&country=ZET&country=BET&country=ALP&country=MPR&country=MSE&country=MST&country=ZST", nil)
+	page := buildPage(dataset, request)
+	if len(page.GrowthRankingRows) != 4 {
+		t.Fatalf("growth ranking should omit missing current or prior values: %+v", page.GrowthRankingRows)
+	}
+	if page.GrowthRankingRows[0].Code != "ZET" || page.GrowthRankingRows[1].Code != "ALP" ||
+		page.GrowthRankingRows[2].Code != "BET" || page.GrowthRankingRows[3].Code != "MST" {
+		t.Fatalf("growth ranking should sort descending with code-ordered ties: %+v", page.GrowthRankingRows)
+	}
+	if page.GrowthRankingRows[1].Growth != "50.00%" || page.GrowthRankingRows[2].Growth != "50.00%" {
+		t.Fatalf("unexpected tied growth values: %+v", page.GrowthRankingRows)
+	}
+
+	cagrByCode := make(map[string]string)
+	for _, row := range page.CAGRRows {
+		cagrByCode[row.Code] = row.Growth
+	}
+	if cagrByCode["ZET"] != "100.00%" || cagrByCode["ALP"] != "50.00%" ||
+		cagrByCode["MPR"] != "41.42%" || cagrByCode["MSE"] != "Unavailable" ||
+		cagrByCode["MST"] != "Unavailable" || cagrByCode["ZST"] != "Unavailable" {
+		t.Fatalf("unexpected CAGR values: %+v", cagrByCode)
+	}
+
+	request = httptest.NewRequest("GET", "/?from=1962&to=1962&country=ZET", nil)
+	page = buildPage(dataset, request)
+	if len(page.CAGRRows) != 1 || page.CAGRRows[0].Growth != "Unavailable" {
+		t.Fatalf("CAGR should be unavailable for a zero-year interval: %+v", page.CAGRRows)
+	}
+	if _, available := compoundAnnualGrowthRate(100, -1, 1); available {
+		t.Fatal("CAGR should be unavailable for a negative end value")
+	}
+}
+
+func TestGrowthRateRejectsNonFiniteResults(t *testing.T) {
+	dataset := &Dataset{
+		YearIndex: map[int]int{1960: 0, 1961: 1},
+	}
+	country := Country{GDP: []float64{1e-308, 1e308}}
+	if _, available := growthRate(dataset, country, 1961, "gdp"); available {
+		t.Fatal("growth should be unavailable when its computed rate is not finite")
 	}
 }
 
@@ -279,6 +337,10 @@ Outside,OTH,500,600
 	page := buildPage(dataset, request)
 	if page.IndicatorLabel != "GDP per capita (current US$)" || len(page.Rankings) != 2 || page.Rankings[0].Value != "$20" {
 		t.Fatalf("unexpected indicator rankings: %+v", page)
+	}
+	if len(page.GrowthRankingRows) != 2 || page.GrowthRankingRows[0].Code != "EXM" ||
+		page.GrowthRankingRows[0].Growth != "100.00%" {
+		t.Fatalf("growth ranking should use the selected indicator: %+v", page.GrowthRankingRows)
 	}
 	if page.Region != "East Asia" || page.IncomeGroup != "High income" || len(page.Countries) != 2 {
 		t.Fatalf("region/income filters did not narrow the country selection: %+v", page)

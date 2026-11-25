@@ -20,7 +20,7 @@ import (
 	"sync"
 )
 
-var appVersion = "1.1.0"
+var appVersion = "1.2.0"
 
 type Country struct {
 	Code         string
@@ -118,6 +118,13 @@ type annualGrowthRow struct {
 	Growth string
 }
 
+type growthRankingRow struct {
+	Rank   int
+	Code   string
+	Name   string
+	Growth string
+}
+
 type growthTrendRow struct {
 	Code   string
 	Name   string
@@ -128,6 +135,12 @@ type cumulativeGrowthRow struct {
 	Code   string
 	Name   string
 	Change string
+}
+
+type cagrRow struct {
+	Code   string
+	Name   string
+	Growth string
 }
 
 type gridLine struct {
@@ -145,6 +158,7 @@ type pageData struct {
 	To                   int
 	MinYear              int
 	MaxYear              int
+	HasSelectedCountries bool
 	Countries            []countryOption
 	Series               []chartSeries
 	Metrics              []metric
@@ -153,9 +167,11 @@ type pageData struct {
 	Empty                bool
 	Rankings             []rankingRow
 	GrowthRows           []annualGrowthRow
+	GrowthRankingRows    []growthRankingRow
 	GrowthYears          []int
 	GrowthTrendRows      []growthTrendRow
 	CumulativeGrowthRows []cumulativeGrowthRow
+	CAGRRows             []cagrRow
 	Indicator            string
 	IndicatorLabel       string
 	Language             string
@@ -165,7 +181,9 @@ type pageData struct {
 	MetricsHeading       string
 	RankingsHeading      string
 	GrowthHeading        string
+	GrowthRankingHeading string
 	CumulativeHeading    string
+	CAGRHeading          string
 	MapHeading           string
 	MapAlt               string
 	Region               string
@@ -205,8 +223,14 @@ type uiText struct {
 	GrowthUnavailable string
 	GrowthTrend       string
 	GrowthTrendHint   string
+	GrowthRanking     string
+	GrowthRankingHint string
+	NoGrowthValues    string
 	CumulativeGrowth  string
 	CumulativeHint    string
+	CAGR              string
+	CAGRValue         string
+	CAGRHint          string
 	Rank              string
 	Country           string
 	CountryName       string
@@ -253,10 +277,16 @@ func translationsFor(language string) uiText {
 			RankingsHeading:   "Clasificación de {indicator} en {year}",
 			GrowthHeading:     "Crecimiento anual de {indicator} en {year}",
 			AnnualGrowthHint:  "Cambio porcentual interanual; el valor del año anterior es el denominador.",
+			GrowthRanking:     "Clasificación del crecimiento anual de {indicator} en {year}",
+			GrowthRankingHint: "Los países se ordenan de mayor a menor por variación porcentual interanual. Se omiten los países sin un valor de crecimiento disponible.",
+			NoGrowthValues:    "No hay valores de crecimiento disponibles para este año.",
 			GrowthTrend:       "Tendencia del crecimiento interanual",
 			GrowthTrendHint:   "Cada columna muestra la variación porcentual anual respecto al año calendario anterior.",
 			CumulativeGrowth:  "Variación acumulada ({from}–{to})",
 			CumulativeHint:    "Cambio porcentual desde el año inicial hasta el año final, usando el valor del año inicial como denominador.",
+			CAGR:              "Tasa de crecimiento anual compuesta (CAGR), {from}–{to}",
+			CAGRValue:         "CAGR",
+			CAGRHint:          "CAGR = ((valor del año final / valor del año inicial)^(1 / años transcurridos) − 1) × 100. No está disponible si falta un extremo, el valor inicial no es positivo o el intervalo es de cero años.",
 			GrowthUnavailable: "Crecimiento no disponible", Rank: "Posición", Country: "País",
 			CountryName: "Nombre del país", CountryCode: "Código del país", Year: "Año", Value: "Valor",
 			Growth: "Crecimiento", NoValuesForYear: "No hay valores disponibles para este año.",
@@ -288,10 +318,16 @@ func translationsFor(language string) uiText {
 			RankingsHeading:   "Classement du {indicator} en {year}",
 			GrowthHeading:     "Croissance annuelle du {indicator} en {year}",
 			AnnualGrowthHint:  "Variation en pourcentage d'une année à l'autre ; la valeur de l'année précédente est le dénominateur.",
+			GrowthRanking:     "Classement de la croissance annuelle du {indicator} en {year}",
+			GrowthRankingHint: "Les pays sont classés du plus élevé au plus faible selon la variation annuelle en pourcentage. Les pays sans croissance disponible sont omis.",
+			NoGrowthValues:    "Aucune valeur de croissance n'est disponible pour cette année.",
 			GrowthTrend:       "Tendance de la croissance annuelle",
 			GrowthTrendHint:   "Chaque colonne indique la variation annuelle en pourcentage par rapport à l'année civile précédente.",
 			CumulativeGrowth:  "Variation cumulée ({from}–{to})",
 			CumulativeHint:    "Variation en pourcentage entre les années de début et de fin, avec la valeur de l'année de début comme dénominateur.",
+			CAGR:              "Taux de croissance annuel composé (TCAC), {from}–{to}",
+			CAGRValue:         "TCAC",
+			CAGRHint:          "TCAC = ((valeur de l'année finale / valeur de l'année initiale)^(1 / nombre d'années écoulées) − 1) × 100. Indisponible si une extrémité manque, si la valeur initiale n'est pas positive ou si la période est de zéro année.",
 			GrowthUnavailable: "Croissance indisponible", Rank: "Rang", Country: "Pays",
 			CountryName: "Nom du pays", CountryCode: "Code du pays", Year: "Année", Value: "Valeur",
 			Growth: "Croissance", NoValuesForYear: "Aucune valeur disponible pour cette année.",
@@ -323,10 +359,16 @@ func translationsFor(language string) uiText {
 			RankingsHeading:   "{indicator} rankings in {year}",
 			GrowthHeading:     "Annual {indicator} growth for {year}",
 			AnnualGrowthHint:  "Year-over-year percent change, using the previous year's value as the denominator.",
+			GrowthRanking:     "Annual {indicator} growth ranking for {year}",
+			GrowthRankingHint: "Countries are ranked highest first by year-over-year percent change. Countries without an available growth value are omitted.",
+			NoGrowthValues:    "No growth values are available for this year.",
 			GrowthTrend:       "Year-over-year growth trend",
 			GrowthTrendHint:   "Each column shows annual percent change for that year, calculated against the previous calendar year.",
 			CumulativeGrowth:  "Cumulative change ({from}–{to})",
 			CumulativeHint:    "Percent change from the selected start year to the end year, using the start-year value as the denominator.",
+			CAGR:              "Compound annual growth rate (CAGR), {from}–{to}",
+			CAGRValue:         "CAGR",
+			CAGRHint:          "CAGR = ((end-year value / start-year value)^(1 / elapsed years) − 1) × 100. It is unavailable when an endpoint is missing, the start value is non-positive, or the interval is zero years.",
 			GrowthUnavailable: "Growth unavailable", Rank: "Rank", Country: "Country",
 			CountryName: "Country Name", CountryCode: "Country Code", Year: "Year", Value: "Value",
 			Growth: "Growth", NoValuesForYear: "No values are available for this year.",
@@ -502,9 +544,17 @@ const pageTemplate = `<!doctype html>
   <div class="panel chart-wrap"><table><thead><tr><th>{{.Text.Country}}</th>{{range .GrowthYears}}<th class="numeric">{{.}}</th>{{end}}</tr></thead><tbody>
     {{range .GrowthTrendRows}}<tr><td>{{.Code}} — {{.Name}}</td>{{range .Values}}<td class="numeric {{if eq . $.Text.Unavailable}}missing{{end}}">{{.}}</td>{{end}}</tr>{{else}}<tr><td class="missing">{{.Text.SelectCountry}}</td></tr>{{end}}
   </tbody></table></div>
+  <h2>{{.GrowthRankingHeading}}</h2><p class="hint">{{.Text.GrowthRankingHint}}</p>
+  <div class="panel"><table><thead><tr><th>{{.Text.Rank}}</th><th>{{.Text.Country}}</th><th class="numeric">{{.Text.Growth}}</th></tr></thead><tbody>
+    {{range .GrowthRankingRows}}<tr><td>{{.Rank}}</td><td>{{.Code}} — {{.Name}}</td><td class="numeric">{{.Growth}}</td></tr>{{else}}<tr><td colspan="3" class="missing">{{if .HasSelectedCountries}}{{.Text.NoGrowthValues}}{{else}}{{.Text.SelectCountry}}{{end}}</td></tr>{{end}}
+  </tbody></table></div>
   <h2>{{.CumulativeHeading}}</h2><p class="hint">{{.Text.CumulativeHint}}</p>
   <div class="panel"><table><thead><tr><th>{{.Text.Country}}</th><th class="numeric">{{.Text.Growth}}</th></tr></thead><tbody>
     {{range .CumulativeGrowthRows}}<tr><td>{{.Code}} — {{.Name}}</td><td class="numeric {{if eq .Change $.Text.Unavailable}}missing{{end}}">{{.Change}}</td></tr>{{else}}<tr><td class="missing">{{.Text.SelectCountry}}</td></tr>{{end}}
+  </tbody></table></div>
+  <h2>{{.CAGRHeading}}</h2><p class="hint">{{.Text.CAGRHint}}</p>
+  <div class="panel"><table><thead><tr><th>{{.Text.Country}}</th><th class="numeric">{{.Text.CAGRValue}}</th></tr></thead><tbody>
+    {{range .CAGRRows}}<tr><td>{{.Code}} — {{.Name}}</td><td class="numeric {{if eq .Growth $.Text.Unavailable}}missing{{end}}">{{.Growth}}</td></tr>{{else}}<tr><td class="missing">{{.Text.SelectCountry}}</td></tr>{{end}}
   </tbody></table></div>
   <h2>{{.MapHeading}}</h2><section class="panel chart-wrap"><svg viewBox="0 0 1000 500" role="img" aria-label="{{.MapAlt}}">
     {{range .MapCountries}}<path d="{{.Path}}" fill="{{.Fill}}" stroke="#fff" stroke-width="0.7"><title>{{.Title}}</title></path>{{else}}<text x="500" y="250" text-anchor="middle" fill="#758198">{{.Text.MissingMapData}}</text>{{end}}
@@ -737,7 +787,22 @@ func growthRate(dataset *Dataset, country Country, year int, indicator string) (
 	if !hasCurrent || !hasPrevious || previous == 0 {
 		return 0, false
 	}
-	return (current/previous - 1) * 100, true
+	rate := (current/previous - 1) * 100
+	if math.IsNaN(rate) || math.IsInf(rate, 0) {
+		return 0, false
+	}
+	return rate, true
+}
+
+func compoundAnnualGrowthRate(start, end float64, elapsedYears int) (float64, bool) {
+	if start <= 0 || end < 0 || elapsedYears <= 0 {
+		return 0, false
+	}
+	rate := (math.Pow(end/start, 1/float64(elapsedYears)) - 1) * 100
+	if math.IsNaN(rate) || math.IsInf(rate, 0) {
+		return 0, false
+	}
+	return rate, true
 }
 
 func indicatorTitle(indicator, language string) string {
@@ -978,13 +1043,18 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 
 	page := pageData{
 		From: from, To: to, MinYear: minimum, MaxYear: maximum,
-		Indicator: indicator, IndicatorLabel: indicatorLabel, Language: language, Text: text,
-		ChartHeading:      localizedMessage(text.ChartHeading, "indicator", indicatorLabel),
-		ChartAlt:          localizedMessage(text.ChartAlt, "indicator", indicatorLabel, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
-		MetricsHeading:    localizedMessage(text.MetricsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
-		RankingsHeading:   localizedMessage(text.RankingsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
-		GrowthHeading:     localizedMessage(text.GrowthHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		HasSelectedCountries: len(selected) > 0,
+		Indicator:            indicator, IndicatorLabel: indicatorLabel, Language: language, Text: text,
+		ChartHeading:    localizedMessage(text.ChartHeading, "indicator", indicatorLabel),
+		ChartAlt:        localizedMessage(text.ChartAlt, "indicator", indicatorLabel, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
+		MetricsHeading:  localizedMessage(text.MetricsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		RankingsHeading: localizedMessage(text.RankingsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		GrowthHeading:   localizedMessage(text.GrowthHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		GrowthRankingHeading: localizedMessage(
+			text.GrowthRanking, "indicator", indicatorLabel, "year", strconv.Itoa(to),
+		),
 		CumulativeHeading: localizedMessage(text.CumulativeGrowth, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
+		CAGRHeading:       localizedMessage(text.CAGR, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
 		MapHeading:        localizedMessage(text.MapHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
 		MapAlt:            localizedMessage(text.MapAlt, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
 		Region:            region, IncomeGroup: incomeGroup,
@@ -993,9 +1063,11 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		Metrics:              make([]metric, 0, len(selected)),
 		Rankings:             make([]rankingRow, 0, len(selected)),
 		GrowthRows:           make([]annualGrowthRow, 0, len(selected)),
+		GrowthRankingRows:    make([]growthRankingRow, 0, len(selected)),
 		GrowthYears:          make([]int, 0, to-from+1),
 		GrowthTrendRows:      make([]growthTrendRow, 0, len(selected)),
 		CumulativeGrowthRows: make([]cumulativeGrowthRow, 0, len(selected)),
+		CAGRRows:             make([]cagrRow, 0, len(selected)),
 	}
 	for year := from; year <= to; year++ {
 		page.GrowthYears = append(page.GrowthYears, year)
@@ -1110,12 +1182,22 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 			Value: formatValue(entry.value, indicator),
 		})
 	}
+	growthRankings := make([]struct {
+		code string
+		name string
+		rate float64
+	}, 0, len(selected))
 	for _, code := range selected {
 		country := dataset.ByCode[code]
 		rate, hasRate := growthRate(dataset, country, to, indicator)
 		growth := text.Unavailable
 		if hasRate {
 			growth = fmt.Sprintf("%.2f%%", rate)
+			growthRankings = append(growthRankings, struct {
+				code string
+				name string
+				rate float64
+			}{code: code, name: country.Name, rate: rate})
 		}
 		page.GrowthRows = append(page.GrowthRows, annualGrowthRow{
 			Code:   code,
@@ -1140,6 +1222,24 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		}
 		page.CumulativeGrowthRows = append(page.CumulativeGrowthRows, cumulativeGrowthRow{
 			Code: code, Name: country.Name, Change: change,
+		})
+		cagr := text.Unavailable
+		if hasStart && hasEnd {
+			if rate, available := compoundAnnualGrowthRate(start, end, to-from); available {
+				cagr = fmt.Sprintf("%.2f%%", rate)
+			}
+		}
+		page.CAGRRows = append(page.CAGRRows, cagrRow{Code: code, Name: country.Name, Growth: cagr})
+	}
+	sort.Slice(growthRankings, func(i, j int) bool {
+		if growthRankings[i].rate == growthRankings[j].rate {
+			return growthRankings[i].code < growthRankings[j].code
+		}
+		return growthRankings[i].rate > growthRankings[j].rate
+	})
+	for index, entry := range growthRankings {
+		page.GrowthRankingRows = append(page.GrowthRankingRows, growthRankingRow{
+			Rank: index + 1, Code: entry.code, Name: entry.name, Growth: fmt.Sprintf("%.2f%%", entry.rate),
 		})
 	}
 	groupTotals := make(map[string]struct {

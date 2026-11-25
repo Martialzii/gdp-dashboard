@@ -48,10 +48,16 @@ const translations = {
     noValuesForYear: "No values are available for this year.",
     annualGrowth: "Annual {indicator} growth for {year}",
     annualGrowthHint: "Year-over-year percent change, using the previous year's value as the denominator.",
+    growthRanking: "Annual {indicator} growth ranking for {year}",
+    growthRankingHint: "Countries are ranked highest first by year-over-year percent change. Countries without an available growth value are omitted.",
+    noGrowthValues: "No growth values are available for this year.",
     growthTrend: "Year-over-year growth trend",
     growthTrendHint: "Each column shows annual percent change for that year, calculated against the previous calendar year.",
     cumulativeGrowth: "Cumulative change ({from}–{to})",
     cumulativeGrowthHint: "Percent change from the selected start year to the end year, using the start-year value as the denominator.",
+    cagr: "Compound annual growth rate (CAGR), {from}–{to}",
+    cagrValue: "CAGR",
+    cagrHint: "CAGR = ((end-year value / start-year value)^(1 / elapsed years) − 1) × 100. It is unavailable when an endpoint is missing, the start value is non-positive, or the interval is zero years.",
     growth: "Growth",
     selectCountry: "Select at least one country.",
     unavailable: "Unavailable",
@@ -106,10 +112,16 @@ const translations = {
     noValuesForYear: "No hay valores disponibles para este año.",
     annualGrowth: "Crecimiento anual de {indicator} en {year}",
     annualGrowthHint: "Cambio porcentual interanual; el valor del año anterior es el denominador.",
+    growthRanking: "Clasificación del crecimiento anual de {indicator} en {year}",
+    growthRankingHint: "Los países se ordenan de mayor a menor por variación porcentual interanual. Se omiten los países sin un valor de crecimiento disponible.",
+    noGrowthValues: "No hay valores de crecimiento disponibles para este año.",
     growthTrend: "Tendencia del crecimiento interanual",
     growthTrendHint: "Cada columna muestra la variación porcentual anual respecto al año calendario anterior.",
     cumulativeGrowth: "Variación acumulada ({from}–{to})",
     cumulativeGrowthHint: "Cambio porcentual desde el año inicial hasta el año final, usando el valor del año inicial como denominador.",
+    cagr: "Tasa de crecimiento anual compuesta (CAGR), {from}–{to}",
+    cagrValue: "CAGR",
+    cagrHint: "CAGR = ((valor del año final / valor del año inicial)^(1 / años transcurridos) − 1) × 100. No está disponible si falta un extremo, el valor inicial no es positivo o el intervalo es de cero años.",
     growth: "Crecimiento",
     selectCountry: "Selecciona al menos un país.",
     unavailable: "No disponible",
@@ -164,10 +176,16 @@ const translations = {
     noValuesForYear: "Aucune valeur disponible pour cette année.",
     annualGrowth: "Croissance annuelle du {indicator} en {year}",
     annualGrowthHint: "Variation en pourcentage d'une année à l'autre ; la valeur de l'année précédente est le dénominateur.",
+    growthRanking: "Classement de la croissance annuelle du {indicator} en {year}",
+    growthRankingHint: "Les pays sont classés du plus élevé au plus faible selon la variation annuelle en pourcentage. Les pays sans croissance disponible sont omis.",
+    noGrowthValues: "Aucune valeur de croissance n'est disponible pour cette année.",
     growthTrend: "Tendance de la croissance annuelle",
     growthTrendHint: "Chaque colonne indique la variation annuelle en pourcentage par rapport à l'année civile précédente.",
     cumulativeGrowth: "Variation cumulée ({from}–{to})",
     cumulativeGrowthHint: "Variation en pourcentage entre les années de début et de fin, avec la valeur de l'année de début comme dénominateur.",
+    cagr: "Taux de croissance annuel composé (TCAC), {from}–{to}",
+    cagrValue: "TCAC",
+    cagrHint: "TCAC = ((valeur de l'année finale / valeur de l'année initiale)^(1 / nombre d'années écoulées) − 1) × 100. Indisponible si une extrémité manque, si la valeur initiale n'est pas positive ou si la période est de zéro année.",
     growth: "Croissance",
     selectCountry: "Sélectionnez au moins un pays.",
     unavailable: "Indisponible",
@@ -402,10 +420,24 @@ function applyStaticTranslations(): void {
   element<HTMLTableCellElement>("growth-country-heading").textContent = message("country");
   element<HTMLTableCellElement>("growth-value-heading").textContent = message("growth");
   element<HTMLParagraphElement>("annual-growth-hint").textContent = message("annualGrowthHint");
+  element<HTMLHeadingElement>("growth-ranking-heading").textContent = message("growthRanking", {
+    indicator: indicatorName(element<HTMLSelectElement>("indicator").value as Indicator),
+    year: element<HTMLInputElement>("to-year").value,
+  });
+  element<HTMLTableCellElement>("growth-ranking-rank-heading").textContent = message("rank");
+  element<HTMLTableCellElement>("growth-ranking-country-heading").textContent = message("country");
+  element<HTMLParagraphElement>("growth-ranking-hint").textContent = message("growthRankingHint");
+  element<HTMLTableCellElement>("cagr-country-heading").textContent = message("country");
+  element<HTMLTableCellElement>("cagr-value-heading").textContent = message("cagrValue");
   element<HTMLHeadingElement>("growth-trend-heading").textContent = message("growthTrend");
   element<HTMLParagraphElement>("growth-trend-hint").textContent = message("growthTrendHint");
   element<HTMLHeadingElement>("cumulative-growth-heading").textContent = message("cumulativeGrowth");
   element<HTMLParagraphElement>("cumulative-growth-hint").textContent = message("cumulativeGrowthHint");
+  element<HTMLHeadingElement>("cagr-heading").textContent = message("cagr", {
+    from: element<HTMLInputElement>("from-year").value,
+    to: element<HTMLInputElement>("to-year").value,
+  });
+  element<HTMLParagraphElement>("cagr-hint").textContent = message("cagrHint");
   element<HTMLHeadingElement>("map-heading").textContent = message("worldMap", {
     indicator: indicatorName(element<HTMLSelectElement>("indicator").value as Indicator),
     year: element<HTMLInputElement>("to-year").value,
@@ -671,13 +703,76 @@ function renderAnnualGrowth(countries: Country[], toYear: number, indicator: Ind
     code.textContent = `${country.code} — ${country.name}`;
     const growth = document.createElement("td");
     growth.className = "numeric";
-    if (current === undefined || previous === undefined || previous === 0) {
+    const rate = annualGrowthRate(current, previous);
+    if (rate === undefined) {
       growth.className += " missing";
       growth.textContent = message("unavailable");
     } else {
-      growth.textContent = `${((current / previous - 1) * 100).toFixed(2)}%`;
+      growth.textContent = `${rate.toFixed(2)}%`;
     }
     row.append(code, growth);
+    root.append(row);
+  });
+}
+
+function annualGrowthRate(current: number | undefined, previous: number | undefined): number | undefined {
+  if (current === undefined || previous === undefined || previous === 0) return undefined;
+  const rate = (current / previous - 1) * 100;
+  return Number.isFinite(rate) ? rate : undefined;
+}
+
+function compoundAnnualGrowthRate(
+  start: number | undefined,
+  end: number | undefined,
+  elapsedYears: number,
+): number | undefined {
+  if (start === undefined || end === undefined || start <= 0 || end < 0 || elapsedYears <= 0) {
+    return undefined;
+  }
+  const rate = ((end / start) ** (1 / elapsedYears) - 1) * 100;
+  return Number.isFinite(rate) ? rate : undefined;
+}
+
+function renderGrowthRankings(countries: Country[], toYear: number, indicator: Indicator): void {
+  const root = element<HTMLTableSectionElement>("growth-rankings");
+  root.replaceChildren();
+  element<HTMLHeadingElement>("growth-ranking-heading").textContent = message("growthRanking", {
+    indicator: indicatorName(indicator), year: toYear,
+  });
+  element<HTMLTableCellElement>("growth-ranking-growth-heading").textContent = message("growth");
+
+  const ranked = countries
+    .map((country) => ({
+      country,
+      rate: annualGrowthRate(
+        valueFor(country, toYear, indicator),
+        valueFor(country, toYear - 1, indicator),
+      ),
+    }))
+    .filter((entry): entry is { country: Country; rate: number } => entry.rate !== undefined)
+    .sort((left, right) => right.rate - left.rate || (left.country.code < right.country.code ? -1 : left.country.code > right.country.code ? 1 : 0));
+
+  if (ranked.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 3;
+    cell.className = "missing";
+    cell.textContent = countries.length === 0 ? message("selectCountry") : message("noGrowthValues");
+    row.append(cell);
+    root.append(row);
+    return;
+  }
+
+  ranked.forEach(({ country, rate }, index) => {
+    const row = document.createElement("tr");
+    const rank = document.createElement("td");
+    rank.textContent = String(index + 1);
+    const name = document.createElement("td");
+    name.textContent = `${country.code} — ${country.name}`;
+    const growth = document.createElement("td");
+    growth.className = "numeric";
+    growth.textContent = `${rate.toFixed(2)}%`;
+    row.append(rank, name, growth);
     root.append(row);
   });
 }
@@ -721,11 +816,12 @@ function renderGrowthTrend(countries: Country[], fromYear: number, toYear: numbe
       const previous = valueFor(country, year - 1, indicator);
       const cell = document.createElement("td");
       cell.className = "numeric";
-      if (current === undefined || previous === undefined || previous === 0) {
+      const rate = annualGrowthRate(current, previous);
+      if (rate === undefined) {
         cell.classList.add("missing");
         cell.textContent = message("unavailable");
       } else {
-        cell.textContent = `${((current / previous - 1) * 100).toFixed(2)}%`;
+        cell.textContent = `${rate.toFixed(2)}%`;
       }
       row.append(cell);
     }
@@ -763,6 +859,44 @@ function renderCumulativeGrowth(countries: Country[], fromYear: number, toYear: 
     cell.className = "missing";
     cell.textContent = message("selectCountry");
     row.append(cell);
+    root.append(row);
+  }
+}
+
+function renderCAGR(countries: Country[], fromYear: number, toYear: number, indicator: Indicator): void {
+  element<HTMLHeadingElement>("cagr-heading").textContent = message("cagr", {
+    from: fromYear, to: toYear,
+  });
+  const root = element<HTMLTableSectionElement>("cagr");
+  root.replaceChildren();
+  if (countries.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 2;
+    cell.className = "missing";
+    cell.textContent = message("selectCountry");
+    row.append(cell);
+    root.append(row);
+    return;
+  }
+  for (const country of countries) {
+    const rate = compoundAnnualGrowthRate(
+      valueFor(country, fromYear, indicator),
+      valueFor(country, toYear, indicator),
+      toYear - fromYear,
+    );
+    const row = document.createElement("tr");
+    const name = document.createElement("td");
+    name.textContent = `${country.code} — ${country.name}`;
+    const value = document.createElement("td");
+    value.className = "numeric";
+    if (rate === undefined) {
+      value.classList.add("missing");
+      value.textContent = message("unavailable");
+    } else {
+      value.textContent = `${rate.toFixed(2)}%`;
+    }
+    row.append(name, value);
     root.append(row);
   }
 }
@@ -1021,8 +1155,10 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
     renderMetrics(chosen, fromYear, toYear, indicator);
     renderRankings(chosen, toYear, indicator);
     renderAnnualGrowth(chosen, toYear, indicator);
+    renderGrowthRankings(chosen, toYear, indicator);
     renderGrowthTrend(chosen, fromYear, toYear, indicator);
     renderCumulativeGrowth(chosen, fromYear, toYear, indicator);
+    renderCAGR(chosen, fromYear, toYear, indicator);
     renderMap(filteredCountries, mapData, toYear, indicator);
     renderComparisons(filteredCountries, toYear, indicator);
     exportButton.disabled = chosen.length === 0;
