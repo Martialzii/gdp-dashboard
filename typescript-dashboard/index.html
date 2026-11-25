@@ -42,6 +42,8 @@
       .export-button { border: 0; border-radius: 8px; background: #3764d8; color: white; padding: 10px 15px; font: inherit; font-weight: 650; cursor: pointer; }
       .export-button:disabled { cursor: not-allowed; opacity: .55; }
       .two-column { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+      .activity-feed { margin: 12px 0 0; padding-left: 22px; color: #49556b; }
+      .activity-feed li { padding: 5px 0; }
       table { width: 100%; border-collapse: collapse; }
       th, td { padding: 10px 12px; border-bottom: 1px solid #edf1f6; text-align: left; }
       th { color: #657187; font-size: .82rem; }
@@ -59,6 +61,19 @@
       <p class="intro"><span id="intro-before">Explore economic indicators from</span> <a id="data-source-link" href="https://data.worldbank.org/">World Bank Open Data</a>.</p>
       <div id="status" role="status" aria-live="polite">Loading GDP data…</div>
       <section id="dashboard" hidden>
+        <div class="two-column">
+          <section class="panel" aria-labelledby="services-heading">
+            <h2 id="services-heading">Data services</h2>
+            <p id="service-ready" role="status">Dashboard data service is available.</p>
+            <p class="hint"><span id="service-source-label">Source</span>: <span id="service-source"></span></p>
+            <p class="hint"><span id="service-updated-label">Snapshot last refreshed</span>: <time id="service-updated"></time></p>
+          </section>
+          <section class="panel" aria-labelledby="activity-heading">
+            <h2 id="activity-heading">Live activity</h2>
+            <p id="activity-privacy" class="hint"></p>
+            <ol id="activity-feed" class="activity-feed" aria-live="polite" aria-relevant="additions"></ol>
+          </section>
+        </div>
         <div class="panel controls">
           <label for="language"><span id="language-label">Language</span>
             <select id="language">

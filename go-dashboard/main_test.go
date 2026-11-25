@@ -61,6 +61,7 @@ Example,EXM,100,200
 		`<html lang="es">`, "Panel del PIB", "Idioma", "Actualizar panel",
 		"el valor del año anterior es el denominador", "Tendencia del crecimiento interanual",
 		"Variación acumulada (1960–1961)", "100.00%",
+		"Servicios de datos", "Actividad en directo", "no se envían datos de uso",
 	} {
 		if !strings.Contains(rendered.String(), expected) {
 			t.Errorf("rendered Spanish page is missing %q", expected)
@@ -252,7 +253,7 @@ Outside,OTH,500,600
 	if err != nil {
 		t.Fatal(err)
 	}
-	snapshot := `{"countries":[
+	snapshot := `{"source":"World Bank Indicators API v2","updatedAt":"2026-01-02T03:04:05.000Z","countries":[
 		{"code":"EXM","region":"East Asia","incomeLevel":"High income","gdpPerCapita":{"1960":5,"1961":10},"realGDP":{"1960":50,"1961":100}},
 		{"code":"SEC","region":"East Asia","incomeLevel":"High income","gdpPerCapita":{"1960":15,"1961":20},"realGDP":{"1960":150,"1961":200}},
 		{"code":"OTH","region":"Europe","incomeLevel":"Low income","gdpPerCapita":{"1960":25,"1961":30},"realGDP":{"1960":250,"1961":300}}
@@ -274,6 +275,10 @@ Outside,OTH,500,600
 	boundaries.WriteString(`]}`)
 	if err := loadIndicatorData(dataset, strings.NewReader(snapshot), strings.NewReader(boundaries.String())); err != nil {
 		t.Fatal(err)
+	}
+	if dataset.SnapshotSource != "World Bank Indicators API v2" ||
+		dataset.SnapshotUpdatedAt != "2026-01-02T03:04:05.000Z" {
+		t.Fatalf("snapshot service metadata was not loaded: source=%q updatedAt=%q", dataset.SnapshotSource, dataset.SnapshotUpdatedAt)
 	}
 	request := httptest.NewRequest("GET", "/?from=1960&to=1961&country=EXM&country=SEC&country=OTH&indicator=gdpPerCapita&region=East+Asia&income=High+income", nil)
 	page := buildPage(dataset, request)

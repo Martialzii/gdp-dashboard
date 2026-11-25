@@ -20,7 +20,7 @@ import (
 	"sync"
 )
 
-var appVersion = "1.1.0"
+var appVersion = "1.2.0"
 
 type Country struct {
 	Code         string
@@ -33,11 +33,13 @@ type Country struct {
 }
 
 type Dataset struct {
-	Countries []Country
-	ByCode    map[string]Country
-	Years     []int
-	YearIndex map[int]int
-	Map       []mapCountry
+	Countries         []Country
+	ByCode            map[string]Country
+	Years             []int
+	YearIndex         map[int]int
+	Map               []mapCountry
+	SnapshotSource    string
+	SnapshotUpdatedAt string
 }
 
 type indicatorCountry struct {
@@ -49,6 +51,8 @@ type indicatorCountry struct {
 }
 
 type indicatorSnapshot struct {
+	Source    string             `json:"source"`
+	UpdatedAt string             `json:"updatedAt"`
 	Countries []indicatorCountry `json:"countries"`
 }
 
@@ -156,6 +160,9 @@ type pageData struct {
 	GrowthYears          []int
 	GrowthTrendRows      []growthTrendRow
 	CumulativeGrowthRows []cumulativeGrowthRow
+	DataSource           string
+	DataUpdatedAt        string
+	SelectedCountryCount int
 	Indicator            string
 	IndicatorLabel       string
 	Language             string
@@ -207,6 +214,18 @@ type uiText struct {
 	GrowthTrendHint   string
 	CumulativeGrowth  string
 	CumulativeHint    string
+	Services          string
+	ServiceReady      string
+	ServiceSource     string
+	ServiceUpdated    string
+	ActivityHeading   string
+	ActivityPrivacy   string
+	ActivityLoaded    string
+	ActivityIndicator string
+	ActivityRange     string
+	ActivityFilters   string
+	ActivityCountries string
+	ActivityExported  string
 	Rank              string
 	Country           string
 	CountryName       string
@@ -247,16 +266,26 @@ func translationsFor(language string) uiText {
 			Years: "Años", From: "Desde", To: "Hasta", Countries: "Países",
 			CountryHint: "Los filtros limitan la lista de países, el mapa y los promedios por grupo. Usa Ctrl (Windows/Linux) o ⌘ (Mac) para seleccionar varios países.",
 			Update:      "Actualizar panel", NoDataSelection: "No hay datos disponibles para esta selección.",
-			ChartAlt:          "Valores de {indicator} desde {from} hasta {to}",
-			ChartHeading:      "{indicator} a lo largo del tiempo",
-			MetricsHeading:    "{indicator} en {year}",
-			RankingsHeading:   "Clasificación de {indicator} en {year}",
-			GrowthHeading:     "Crecimiento anual de {indicator} en {year}",
-			AnnualGrowthHint:  "Cambio porcentual interanual; el valor del año anterior es el denominador.",
-			GrowthTrend:       "Tendencia del crecimiento interanual",
-			GrowthTrendHint:   "Cada columna muestra la variación porcentual anual respecto al año calendario anterior.",
-			CumulativeGrowth:  "Variación acumulada ({from}–{to})",
-			CumulativeHint:    "Cambio porcentual desde el año inicial hasta el año final, usando el valor del año inicial como denominador.",
+			ChartAlt:         "Valores de {indicator} desde {from} hasta {to}",
+			ChartHeading:     "{indicator} a lo largo del tiempo",
+			MetricsHeading:   "{indicator} en {year}",
+			RankingsHeading:  "Clasificación de {indicator} en {year}",
+			GrowthHeading:    "Crecimiento anual de {indicator} en {year}",
+			AnnualGrowthHint: "Cambio porcentual interanual; el valor del año anterior es el denominador.",
+			GrowthTrend:      "Tendencia del crecimiento interanual",
+			GrowthTrendHint:  "Cada columna muestra la variación porcentual anual respecto al año calendario anterior.",
+			CumulativeGrowth: "Variación acumulada ({from}–{to})",
+			CumulativeHint:   "Cambio porcentual desde el año inicial hasta el año final, usando el valor del año inicial como denominador.",
+			Services:         "Servicios de datos", ServiceReady: "El servicio de datos del panel está disponible.",
+			ServiceSource: "Fuente", ServiceUpdated: "Última actualización de la instantánea",
+			ActivityHeading:   "Actividad en directo",
+			ActivityPrivacy:   "Las acciones recientes solo se guardan en esta página; no se envían datos de uso.",
+			ActivityLoaded:    "Panel listo: {indicator}, {from}–{to}, {count} países.",
+			ActivityIndicator: "Indicador cambiado a {indicator}.",
+			ActivityRange:     "Intervalo de años cambiado a {from}–{to}.",
+			ActivityFilters:   "Filtro de región o ingresos cambiado.",
+			ActivityCountries: "Selección de países cambiada ({count} países).",
+			ActivityExported:  "CSV exportado para {count} países.",
 			GrowthUnavailable: "Crecimiento no disponible", Rank: "Posición", Country: "País",
 			CountryName: "Nombre del país", CountryCode: "Código del país", Year: "Año", Value: "Valor",
 			Growth: "Crecimiento", NoValuesForYear: "No hay valores disponibles para este año.",
@@ -282,16 +311,26 @@ func translationsFor(language string) uiText {
 			Years: "Années", From: "De", To: "À", Countries: "Pays",
 			CountryHint: "Les filtres réduisent la liste des pays, la carte et les moyennes par groupe. Utilisez Ctrl (Windows/Linux) ou ⌘ (Mac) pour sélectionner plusieurs pays.",
 			Update:      "Actualiser le tableau", NoDataSelection: "Aucune donnée disponible pour cette sélection.",
-			ChartAlt:          "Valeurs du {indicator} de {from} à {to}",
-			ChartHeading:      "{indicator} au fil du temps",
-			MetricsHeading:    "{indicator} en {year}",
-			RankingsHeading:   "Classement du {indicator} en {year}",
-			GrowthHeading:     "Croissance annuelle du {indicator} en {year}",
-			AnnualGrowthHint:  "Variation en pourcentage d'une année à l'autre ; la valeur de l'année précédente est le dénominateur.",
-			GrowthTrend:       "Tendance de la croissance annuelle",
-			GrowthTrendHint:   "Chaque colonne indique la variation annuelle en pourcentage par rapport à l'année civile précédente.",
-			CumulativeGrowth:  "Variation cumulée ({from}–{to})",
-			CumulativeHint:    "Variation en pourcentage entre les années de début et de fin, avec la valeur de l'année de début comme dénominateur.",
+			ChartAlt:         "Valeurs du {indicator} de {from} à {to}",
+			ChartHeading:     "{indicator} au fil du temps",
+			MetricsHeading:   "{indicator} en {year}",
+			RankingsHeading:  "Classement du {indicator} en {year}",
+			GrowthHeading:    "Croissance annuelle du {indicator} en {year}",
+			AnnualGrowthHint: "Variation en pourcentage d'une année à l'autre ; la valeur de l'année précédente est le dénominateur.",
+			GrowthTrend:      "Tendance de la croissance annuelle",
+			GrowthTrendHint:  "Chaque colonne indique la variation annuelle en pourcentage par rapport à l'année civile précédente.",
+			CumulativeGrowth: "Variation cumulée ({from}–{to})",
+			CumulativeHint:   "Variation en pourcentage entre les années de début et de fin, avec la valeur de l'année de début comme dénominateur.",
+			Services:         "Services de données", ServiceReady: "Le service de données du tableau de bord est disponible.",
+			ServiceSource: "Source", ServiceUpdated: "Dernière actualisation de l’instantané",
+			ActivityHeading:   "Activité en direct",
+			ActivityPrivacy:   "Les actions récentes restent sur cette page ; aucune télémétrie d’utilisation n’est envoyée.",
+			ActivityLoaded:    "Tableau prêt : {indicator}, {from}–{to}, {count} pays.",
+			ActivityIndicator: "Indicateur changé : {indicator}.",
+			ActivityRange:     "Période changée : {from}–{to}.",
+			ActivityFilters:   "Filtre de région ou de revenu modifié.",
+			ActivityCountries: "Sélection des pays modifiée ({count} pays).",
+			ActivityExported:  "CSV exporté pour {count} pays.",
 			GrowthUnavailable: "Croissance indisponible", Rank: "Rang", Country: "Pays",
 			CountryName: "Nom du pays", CountryCode: "Code du pays", Year: "Année", Value: "Valeur",
 			Growth: "Croissance", NoValuesForYear: "Aucune valeur disponible pour cette année.",
@@ -317,16 +356,26 @@ func translationsFor(language string) uiText {
 			Years: "Years", From: "From", To: "To", Countries: "Countries",
 			CountryHint: "Filters narrow the country list, map, and group averages. Use Ctrl (Windows/Linux) or ⌘ (Mac) to select multiple countries.",
 			Update:      "Update dashboard", NoDataSelection: "No data is available for this selection.",
-			ChartAlt:          "{indicator} values from {from} through {to}",
-			ChartHeading:      "{indicator} over time",
-			MetricsHeading:    "{indicator} in {year}",
-			RankingsHeading:   "{indicator} rankings in {year}",
-			GrowthHeading:     "Annual {indicator} growth for {year}",
-			AnnualGrowthHint:  "Year-over-year percent change, using the previous year's value as the denominator.",
-			GrowthTrend:       "Year-over-year growth trend",
-			GrowthTrendHint:   "Each column shows annual percent change for that year, calculated against the previous calendar year.",
-			CumulativeGrowth:  "Cumulative change ({from}–{to})",
-			CumulativeHint:    "Percent change from the selected start year to the end year, using the start-year value as the denominator.",
+			ChartAlt:         "{indicator} values from {from} through {to}",
+			ChartHeading:     "{indicator} over time",
+			MetricsHeading:   "{indicator} in {year}",
+			RankingsHeading:  "{indicator} rankings in {year}",
+			GrowthHeading:    "Annual {indicator} growth for {year}",
+			AnnualGrowthHint: "Year-over-year percent change, using the previous year's value as the denominator.",
+			GrowthTrend:      "Year-over-year growth trend",
+			GrowthTrendHint:  "Each column shows annual percent change for that year, calculated against the previous calendar year.",
+			CumulativeGrowth: "Cumulative change ({from}–{to})",
+			CumulativeHint:   "Percent change from the selected start year to the end year, using the start-year value as the denominator.",
+			Services:         "Data services", ServiceReady: "Dashboard data service is available.",
+			ServiceSource: "Source", ServiceUpdated: "Snapshot last refreshed",
+			ActivityHeading:   "Live activity",
+			ActivityPrivacy:   "Recent actions are kept on this page only; no usage telemetry is sent.",
+			ActivityLoaded:    "Dashboard ready: {indicator}, {from}–{to}, {count} countries.",
+			ActivityIndicator: "Indicator changed to {indicator}.",
+			ActivityRange:     "Year range changed to {from}–{to}.",
+			ActivityFilters:   "Region or income-group filter changed.",
+			ActivityCountries: "Country selection changed ({count} countries).",
+			ActivityExported:  "CSV exported for {count} countries.",
 			GrowthUnavailable: "Growth unavailable", Rank: "Rank", Country: "Country",
 			CountryName: "Country Name", CountryCode: "Country Code", Year: "Year", Value: "Value",
 			Growth: "Growth", NoValuesForYear: "No values are available for this year.",
@@ -437,7 +486,7 @@ const pageTemplate = `<!doctype html>
     .metric{padding:16px;border:1px solid #e4e9f1;border-radius:12px}.metric-code{color:#657187;font-size:.84rem;font-weight:650}
     .metric-value{margin-top:8px;font-size:1.45rem;font-weight:720;letter-spacing:-.03em}.metric-growth{margin-top:4px;color:#18835b;font-size:.83rem}
     .actions{display:flex;justify-content:flex-end;margin:18px 0 0}.export-button{display:inline-block;border:0;border-radius:8px;background:#3764d8;color:white;padding:10px 15px;font:inherit;font-weight:650;text-decoration:none}
-    .two-column{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}table{width:100%;border-collapse:collapse}
+    .two-column{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.activity-feed{margin:12px 0 0;padding-left:22px;color:#49556b}.activity-feed li{padding:5px 0}table{width:100%;border-collapse:collapse}
     th,td{padding:10px 12px;border-bottom:1px solid #edf1f6;text-align:left}th{color:#657187;font-size:.82rem}td.numeric,th.numeric{text-align:right;font-variant-numeric:tabular-nums}.missing{color:#78849a}
     .empty{color:#758198;text-align:center;padding:44px 12px}@media(max-width:680px){main{padding:28px 16px 48px}.controls{grid-template-columns:1fr}.panel{padding:17px}}
   </style>
@@ -476,6 +525,22 @@ const pageTemplate = `<!doctype html>
       <button type="submit">{{.Text.Update}}</button>
     </div>
   </form>
+  <div class="two-column">
+    <section class="panel" aria-labelledby="services-heading"><h2 id="services-heading">{{.Text.Services}}</h2>
+      <p role="status">{{.Text.ServiceReady}}</p>
+      <p class="hint">{{.Text.ServiceSource}}: {{if .DataSource}}{{.DataSource}}{{else}}{{.Text.SourceName}}{{end}}</p>
+      <p class="hint">{{.Text.ServiceUpdated}}: <time>{{if .DataUpdatedAt}}{{.DataUpdatedAt}}{{else}}{{.Text.Unavailable}}{{end}}</time></p>
+    </section>
+    <section class="panel" aria-labelledby="activity-heading"><h2 id="activity-heading">{{.Text.ActivityHeading}}</h2>
+      <p class="hint">{{.Text.ActivityPrivacy}}</p>
+      <ol id="activity-feed" class="activity-feed" aria-live="polite" aria-relevant="additions"
+        data-loaded="{{.Text.ActivityLoaded}}" data-indicator="{{.Text.ActivityIndicator}}"
+        data-range="{{.Text.ActivityRange}}" data-filters="{{.Text.ActivityFilters}}"
+        data-countries="{{.Text.ActivityCountries}}" data-exported="{{.Text.ActivityExported}}"
+        data-indicator-label="{{.IndicatorLabel}}" data-from="{{.From}}" data-to="{{.To}}"
+        data-count="{{.SelectedCountryCount}}"></ol>
+    </section>
+  </div>
   <h2>{{.ChartHeading}}</h2><section class="panel chart-wrap">
     {{if .Empty}}<p class="empty">{{.Text.NoDataSelection}}</p>{{else}}
     <svg viewBox="0 0 1000 390" role="img" aria-label="{{.ChartAlt}}">
@@ -513,6 +578,42 @@ const pageTemplate = `<!doctype html>
   <section class="panel"><table><thead><tr><th>{{.Text.Group}}</th><th class="numeric">{{.Text.Average}}</th><th class="numeric">{{.Text.CountriesCount}}</th></tr></thead><tbody>
     {{range .Comparisons}}<tr><td>{{.Group}}</td><td class="numeric">{{.Average}}</td><td class="numeric">{{.Count}}</td></tr>{{else}}<tr><td colspan="3" class="missing">{{$.Text.NoValuesForYear}}</td></tr>{{end}}
   </tbody></table></section>
+  <script>
+    const feed = document.getElementById("activity-feed");
+    const entries = [];
+    function addActivity(template, values = {}) {
+      const text = Object.entries(values).reduce((result, [key, value]) =>
+        result.replaceAll("{" + key + "}", String(value)), template);
+      entries.unshift(text);
+      entries.length = Math.min(entries.length, 8);
+      feed.replaceChildren(...entries.map((entry) => {
+        const item = document.createElement("li");
+        item.textContent = entry;
+        return item;
+      }));
+    }
+    const selectedCount = () => document.getElementById("countries").selectedOptions.length;
+    addActivity(feed.dataset.loaded, {
+      indicator: feed.dataset.indicatorLabel, from: feed.dataset.from,
+      to: feed.dataset.to, count: feed.dataset.count
+    });
+    document.getElementById("from").addEventListener("input", updateRange);
+    document.getElementById("to").addEventListener("input", updateRange);
+    function updateRange() {
+      addActivity(feed.dataset.range, {
+        from: document.getElementById("from").value, to: document.getElementById("to").value
+      });
+    }
+    document.getElementById("indicator").addEventListener("change", (event) =>
+      addActivity(feed.dataset.indicator, { indicator: event.target.selectedOptions[0].textContent }));
+    document.getElementById("countries").addEventListener("change", () =>
+      addActivity(feed.dataset.countries, { count: selectedCount() }));
+    for (const id of ["region", "income"]) {
+      document.getElementById(id).addEventListener("change", () => addActivity(feed.dataset.filters));
+    }
+    document.querySelector("a.export-button").addEventListener("click", () =>
+      addActivity(feed.dataset.exported, { count: selectedCount() }));
+  </script>
 </main></body></html>`
 
 func loadDataset(source io.Reader) (*Dataset, error) {
@@ -604,6 +705,8 @@ func loadIndicatorData(dataset *Dataset, snapshotSource, mapSource io.Reader) er
 	if err := json.NewDecoder(snapshotSource).Decode(&snapshot); err != nil {
 		return fmt.Errorf("decode World Bank indicator snapshot: %w", err)
 	}
+	dataset.SnapshotSource = snapshot.Source
+	dataset.SnapshotUpdatedAt = snapshot.UpdatedAt
 	metadata := make(map[string]indicatorCountry, len(snapshot.Countries))
 	for _, entry := range snapshot.Countries {
 		metadata[entry.Code] = entry
@@ -979,15 +1082,18 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 	page := pageData{
 		From: from, To: to, MinYear: minimum, MaxYear: maximum,
 		Indicator: indicator, IndicatorLabel: indicatorLabel, Language: language, Text: text,
-		ChartHeading:      localizedMessage(text.ChartHeading, "indicator", indicatorLabel),
-		ChartAlt:          localizedMessage(text.ChartAlt, "indicator", indicatorLabel, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
-		MetricsHeading:    localizedMessage(text.MetricsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
-		RankingsHeading:   localizedMessage(text.RankingsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
-		GrowthHeading:     localizedMessage(text.GrowthHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
-		CumulativeHeading: localizedMessage(text.CumulativeGrowth, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
-		MapHeading:        localizedMessage(text.MapHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
-		MapAlt:            localizedMessage(text.MapAlt, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
-		Region:            region, IncomeGroup: incomeGroup,
+		ChartHeading:         localizedMessage(text.ChartHeading, "indicator", indicatorLabel),
+		ChartAlt:             localizedMessage(text.ChartAlt, "indicator", indicatorLabel, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
+		MetricsHeading:       localizedMessage(text.MetricsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		RankingsHeading:      localizedMessage(text.RankingsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		GrowthHeading:        localizedMessage(text.GrowthHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		CumulativeHeading:    localizedMessage(text.CumulativeGrowth, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
+		DataSource:           dataset.SnapshotSource,
+		DataUpdatedAt:        dataset.SnapshotUpdatedAt,
+		SelectedCountryCount: len(selected),
+		MapHeading:           localizedMessage(text.MapHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		MapAlt:               localizedMessage(text.MapAlt, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
+		Region:               region, IncomeGroup: incomeGroup,
 		Regions: knownRegions, IncomeGroups: knownIncomeGroups,
 		Countries:            make([]countryOption, 0, len(filteredCountries)),
 		Metrics:              make([]metric, 0, len(selected)),

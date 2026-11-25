@@ -52,6 +52,18 @@ const translations = {
     growthTrendHint: "Each column shows annual percent change for that year, calculated against the previous calendar year.",
     cumulativeGrowth: "Cumulative change ({from}–{to})",
     cumulativeGrowthHint: "Percent change from the selected start year to the end year, using the start-year value as the denominator.",
+    services: "Data services",
+    serviceReady: "Dashboard data service is available.",
+    serviceSource: "Source",
+    serviceUpdated: "Snapshot last refreshed",
+    activityHeading: "Live activity",
+    activityPrivacy: "Recent actions are kept on this page only; no usage telemetry is sent.",
+    activityLoaded: "Dashboard ready: {indicator}, {from}–{to}, {count} countries.",
+    activityIndicatorChanged: "Indicator changed to {indicator}.",
+    activityRangeChanged: "Year range changed to {from}–{to}.",
+    activityFiltersChanged: "Region or income-group filter changed.",
+    activityCountriesChanged: "Country selection changed ({count} countries).",
+    activityExported: "CSV exported for {count} countries.",
     growth: "Growth",
     selectCountry: "Select at least one country.",
     unavailable: "Unavailable",
@@ -110,6 +122,18 @@ const translations = {
     growthTrendHint: "Cada columna muestra la variación porcentual anual respecto al año calendario anterior.",
     cumulativeGrowth: "Variación acumulada ({from}–{to})",
     cumulativeGrowthHint: "Cambio porcentual desde el año inicial hasta el año final, usando el valor del año inicial como denominador.",
+    services: "Servicios de datos",
+    serviceReady: "El servicio de datos del panel está disponible.",
+    serviceSource: "Fuente",
+    serviceUpdated: "Última actualización de la instantánea",
+    activityHeading: "Actividad en directo",
+    activityPrivacy: "Las acciones recientes solo se guardan en esta página; no se envían datos de uso.",
+    activityLoaded: "Panel listo: {indicator}, {from}–{to}, {count} países.",
+    activityIndicatorChanged: "Indicador cambiado a {indicator}.",
+    activityRangeChanged: "Intervalo de años cambiado a {from}–{to}.",
+    activityFiltersChanged: "Filtro de región o ingresos cambiado.",
+    activityCountriesChanged: "Selección de países cambiada ({count} países).",
+    activityExported: "CSV exportado para {count} países.",
     growth: "Crecimiento",
     selectCountry: "Selecciona al menos un país.",
     unavailable: "No disponible",
@@ -168,6 +192,18 @@ const translations = {
     growthTrendHint: "Chaque colonne indique la variation annuelle en pourcentage par rapport à l'année civile précédente.",
     cumulativeGrowth: "Variation cumulée ({from}–{to})",
     cumulativeGrowthHint: "Variation en pourcentage entre les années de début et de fin, avec la valeur de l'année de début comme dénominateur.",
+    services: "Services de données",
+    serviceReady: "Le service de données du tableau de bord est disponible.",
+    serviceSource: "Source",
+    serviceUpdated: "Dernière actualisation de l’instantané",
+    activityHeading: "Activité en direct",
+    activityPrivacy: "Les actions récentes restent sur cette page ; aucune télémétrie d’utilisation n’est envoyée.",
+    activityLoaded: "Tableau prêt : {indicator}, {from}–{to}, {count} pays.",
+    activityIndicatorChanged: "Indicateur changé : {indicator}.",
+    activityRangeChanged: "Période changée : {from}–{to}.",
+    activityFiltersChanged: "Filtre de région ou de revenu modifié.",
+    activityCountriesChanged: "Sélection des pays modifiée ({count} pays).",
+    activityExported: "CSV exporté pour {count} pays.",
     growth: "Croissance",
     selectCountry: "Sélectionnez au moins un pays.",
     unavailable: "Indisponible",
@@ -194,6 +230,8 @@ const translations = {
 } satisfies Record<Language, Record<string, string>>;
 
 interface IndicatorSnapshot {
+  source?: string;
+  updatedAt?: string;
   countries: Array<{
     code: string;
     region: string;
@@ -223,6 +261,10 @@ const svgNamespace = "http://www.w3.org/2000/svg";
 const maximumChartPoints = 800;
 let yearIndexes = new Map<number, number>();
 let language: Language = "en";
+let snapshotMetadata: Pick<IndicatorSnapshot, "source" | "updatedAt"> = {};
+type ActivityKey = "activityLoaded" | "activityIndicatorChanged" | "activityRangeChanged" |
+  "activityFiltersChanged" | "activityCountriesChanged" | "activityExported";
+const activityItems: Array<{ key: ActivityKey; values: Record<string, string | number> }> = [];
 
 function message(key: keyof typeof translations.en, values: Record<string, string | number> = {}): string {
   return Object.entries(values).reduce(
@@ -406,6 +448,12 @@ function applyStaticTranslations(): void {
   element<HTMLParagraphElement>("growth-trend-hint").textContent = message("growthTrendHint");
   element<HTMLHeadingElement>("cumulative-growth-heading").textContent = message("cumulativeGrowth");
   element<HTMLParagraphElement>("cumulative-growth-hint").textContent = message("cumulativeGrowthHint");
+  element<HTMLHeadingElement>("services-heading").textContent = message("services");
+  element<HTMLParagraphElement>("service-ready").textContent = message("serviceReady");
+  element<HTMLSpanElement>("service-source-label").textContent = message("serviceSource");
+  element<HTMLSpanElement>("service-updated-label").textContent = message("serviceUpdated");
+  element<HTMLHeadingElement>("activity-heading").textContent = message("activityHeading");
+  element<HTMLParagraphElement>("activity-privacy").textContent = message("activityPrivacy");
   element<HTMLHeadingElement>("map-heading").textContent = message("worldMap", {
     indicator: indicatorName(element<HTMLSelectElement>("indicator").value as Indicator),
     year: element<HTMLInputElement>("to-year").value,
@@ -418,6 +466,30 @@ function element<T extends HTMLElement>(id: string): T {
   const value = document.getElementById(id);
   if (!value) throw new Error(`Missing dashboard element: ${id}`);
   return value as T;
+}
+
+function recordActivity(key: ActivityKey, values: Record<string, string | number>): void {
+  activityItems.unshift({ key, values });
+  activityItems.length = Math.min(activityItems.length, 8);
+  renderActivity();
+}
+
+function renderActivity(): void {
+  const feed = element<HTMLOListElement>("activity-feed");
+  feed.replaceChildren(...activityItems.map(({ key: itemKey, values: itemValues }) => {
+    const item = document.createElement("li");
+    item.textContent = message(itemKey, itemValues);
+    return item;
+  }));
+}
+
+function renderServiceStatus(): void {
+  element<HTMLSpanElement>("service-source").textContent = snapshotMetadata.source ?? message("sourceName");
+  const updatedAt = snapshotMetadata.updatedAt;
+  element<HTMLTimeElement>("service-updated").textContent = updatedAt
+    ? new Date(updatedAt).toLocaleString(language)
+    : message("unavailable");
+  if (updatedAt) element<HTMLTimeElement>("service-updated").dateTime = updatedAt;
 }
 
 function makeSvg<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTagNameMap[K] {
@@ -949,6 +1021,7 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
   const regionSelect = element<HTMLSelectElement>("region-filter");
   const incomeSelect = element<HTMLSelectElement>("income-filter");
   const languageSelect = element<HTMLSelectElement>("language");
+  let firstUpdate = true;
   const requestedLanguage = new URLSearchParams(window.location.search).get("lang");
   language = requestedLanguage === "es" || requestedLanguage === "fr" ? requestedLanguage : "en";
   languageSelect.value = language;
@@ -1025,16 +1098,39 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
     renderCumulativeGrowth(chosen, fromYear, toYear, indicator);
     renderMap(filteredCountries, mapData, toYear, indicator);
     renderComparisons(filteredCountries, toYear, indicator);
+    renderServiceStatus();
+    renderActivity();
     exportButton.disabled = chosen.length === 0;
+    if (firstUpdate) {
+      recordActivity("activityLoaded", {
+        indicator: indicatorName(indicator), from: fromYear, to: toYear, count: chosen.length,
+      });
+      firstUpdate = false;
+    }
   };
-  from.addEventListener("input", update);
-  to.addEventListener("input", update);
-  select.addEventListener("change", update);
-  indicatorSelect.addEventListener("change", update);
+  const rangeChanged = (): void => {
+    update();
+    recordActivity("activityRangeChanged", { from: from.value, to: to.value });
+  };
+  from.addEventListener("input", rangeChanged);
+  to.addEventListener("input", rangeChanged);
+  select.addEventListener("change", () => {
+    update();
+    recordActivity("activityCountriesChanged", {
+      count: Array.from(select.selectedOptions).length,
+    });
+  });
+  indicatorSelect.addEventListener("change", () => {
+    update();
+    recordActivity("activityIndicatorChanged", {
+      indicator: indicatorName(indicatorSelect.value as Indicator),
+    });
+  });
   const filtersChanged = (): void => {
     const selectedCodes = new Set(Array.from(select.selectedOptions, (option) => option.value));
     refreshCountryOptions(selectedCodes);
     update();
+    recordActivity("activityFiltersChanged", {});
   };
   regionSelect.addEventListener("change", filtersChanged);
   incomeSelect.addEventListener("change", filtersChanged);
@@ -1048,7 +1144,10 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
     applyStaticTranslations();
     update();
   });
-  exportButton.addEventListener("click", () => exportVisibleCSV(visibleCountries, visibleFromYear, visibleToYear, visibleIndicator));
+  exportButton.addEventListener("click", () => {
+    exportVisibleCSV(visibleCountries, visibleFromYear, visibleToYear, visibleIndicator);
+    recordActivity("activityExported", { count: visibleCountries.length });
+  });
   update();
   element<HTMLDivElement>("dashboard").hidden = false;
 }
@@ -1073,6 +1172,7 @@ async function start(): Promise<void> {
       snapshotResponse.json() as Promise<IndicatorSnapshot>,
       mapResponse.json() as Promise<MapData>,
     ]);
+    snapshotMetadata = { source: snapshot.source, updatedAt: snapshot.updatedAt };
     const { countries, years } = await parseDataset(response);
     const indicatorByCode = new Map(snapshot.countries.map((country) => [country.code, country]));
     for (const country of countries) {
