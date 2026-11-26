@@ -62,6 +62,9 @@ Example,EXM,100,200
 		"el valor del año anterior es el denominador", "Tendencia del crecimiento interanual",
 		"Variación acumulada (1960–1961)", "100.00%",
 		"Servicios de datos", "Actividad en directo", "no se envían datos de uso",
+		"Personaliza tu vista", "Guardar esta vista en este dispositivo",
+		"Borrar vista guardada",
+		"gdp-dashboard:saved-view:v1", "countriesSelected",
 	} {
 		if !strings.Contains(rendered.String(), expected) {
 			t.Errorf("rendered Spanish page is missing %q", expected)

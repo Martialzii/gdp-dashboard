@@ -64,6 +64,15 @@ const translations = {
     activityFiltersChanged: "Region or income-group filter changed.",
     activityCountriesChanged: "Country selection changed ({count} countries).",
     activityExported: "CSV exported for {count} countries.",
+    preferencesHeading: "Personalize your view",
+    saveView: "Save this view on this device",
+    restoreView: "Restore saved view",
+    clearView: "Clear saved view",
+    savedView: "Dashboard view saved on this device.",
+    clearedView: "Saved dashboard view cleared from this device.",
+    noSavedView: "No saved view is available on this device.",
+    preferencesError: "Unable to access saved views in this browser.",
+    preferencesPrivacy: "Saved view stays in this browser and includes only language, indicator, filters, countries, and years.",
     growth: "Growth",
     selectCountry: "Select at least one country.",
     unavailable: "Unavailable",
@@ -134,6 +143,15 @@ const translations = {
     activityFiltersChanged: "Filtro de región o ingresos cambiado.",
     activityCountriesChanged: "Selección de países cambiada ({count} países).",
     activityExported: "CSV exportado para {count} países.",
+    preferencesHeading: "Personaliza tu vista",
+    saveView: "Guardar esta vista en este dispositivo",
+    restoreView: "Restaurar vista guardada",
+    clearView: "Borrar vista guardada",
+    savedView: "Vista del panel guardada en este dispositivo.",
+    clearedView: "Vista guardada borrada de este dispositivo.",
+    noSavedView: "No hay una vista guardada en este dispositivo.",
+    preferencesError: "No se puede acceder a las vistas guardadas en este navegador.",
+    preferencesPrivacy: "La vista se guarda en este navegador e incluye solo idioma, indicador, filtros, países y años.",
     growth: "Crecimiento",
     selectCountry: "Selecciona al menos un país.",
     unavailable: "No disponible",
@@ -204,6 +222,15 @@ const translations = {
     activityFiltersChanged: "Filtre de région ou de revenu modifié.",
     activityCountriesChanged: "Sélection des pays modifiée ({count} pays).",
     activityExported: "CSV exporté pour {count} pays.",
+    preferencesHeading: "Personnaliser votre vue",
+    saveView: "Enregistrer cette vue sur cet appareil",
+    restoreView: "Restaurer la vue enregistrée",
+    clearView: "Supprimer la vue enregistrée",
+    savedView: "Vue du tableau de bord enregistrée sur cet appareil.",
+    clearedView: "Vue enregistrée supprimée de cet appareil.",
+    noSavedView: "Aucune vue enregistrée n’est disponible sur cet appareil.",
+    preferencesError: "Impossible d’accéder aux vues enregistrées dans ce navigateur.",
+    preferencesPrivacy: "La vue reste dans ce navigateur et contient uniquement la langue, l’indicateur, les filtres, les pays et les années.",
     growth: "Croissance",
     selectCountry: "Sélectionnez au moins un pays.",
     unavailable: "Indisponible",
@@ -454,6 +481,11 @@ function applyStaticTranslations(): void {
   element<HTMLSpanElement>("service-updated-label").textContent = message("serviceUpdated");
   element<HTMLHeadingElement>("activity-heading").textContent = message("activityHeading");
   element<HTMLParagraphElement>("activity-privacy").textContent = message("activityPrivacy");
+  element<HTMLHeadingElement>("preferences-heading").textContent = message("preferencesHeading");
+  element<HTMLButtonElement>("save-view").textContent = message("saveView");
+  element<HTMLButtonElement>("restore-view").textContent = message("restoreView");
+  element<HTMLButtonElement>("clear-view").textContent = message("clearView");
+  element<HTMLParagraphElement>("preferences-privacy").textContent = message("preferencesPrivacy");
   element<HTMLHeadingElement>("map-heading").textContent = message("worldMap", {
     indicator: indicatorName(element<HTMLSelectElement>("indicator").value as Indicator),
     year: element<HTMLInputElement>("to-year").value,
@@ -1021,8 +1053,10 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
   const regionSelect = element<HTMLSelectElement>("region-filter");
   const incomeSelect = element<HTMLSelectElement>("income-filter");
   const languageSelect = element<HTMLSelectElement>("language");
+  const preferencesStatus = element<HTMLParagraphElement>("preferences-status");
   let firstUpdate = true;
-  const requestedLanguage = new URLSearchParams(window.location.search).get("lang");
+  const query = new URLSearchParams(window.location.search);
+  const requestedLanguage = query.get("lang");
   language = requestedLanguage === "es" || requestedLanguage === "fr" ? requestedLanguage : "en";
   languageSelect.value = language;
   const minimum = Math.min(...years);
@@ -1055,6 +1089,24 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
   };
   addFilterOptions(regionSelect, [...new Set(countries.map(({ region }) => region).filter(Boolean))].sort(), message("allRegions"));
   addFilterOptions(incomeSelect, [...new Set(countries.map(({ incomeLevel }) => incomeLevel).filter(Boolean))].sort(), message("allIncomeGroups"));
+  const requestedIndicator = query.get("indicator");
+  if (requestedIndicator === "gdp" || requestedIndicator === "gdpPerCapita" || requestedIndicator === "realGDP") {
+    indicatorSelect.value = requestedIndicator;
+  }
+  if (Array.from(regionSelect.options).some(({ value }) => value === query.get("region"))) {
+    regionSelect.value = query.get("region") ?? "";
+  }
+  if (Array.from(incomeSelect.options).some(({ value }) => value === query.get("income"))) {
+    incomeSelect.value = query.get("income") ?? "";
+  }
+  const requestedFrom = Number(query.get("from"));
+  const requestedTo = Number(query.get("to"));
+  if (Number.isInteger(requestedFrom) && requestedFrom >= minimum && requestedFrom <= maximum) {
+    from.value = String(requestedFrom);
+  }
+  if (Number.isInteger(requestedTo) && requestedTo >= minimum && requestedTo <= maximum) {
+    to.value = String(requestedTo);
+  }
 
   const refreshCountryOptions = (preservedCodes?: Set<string>): void => {
     const available = countriesForFilters(countries, regionSelect.value, incomeSelect.value);
@@ -1069,7 +1121,9 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
       select.append(option);
     }
   };
-  refreshCountryOptions();
+  const requestedCountries = query.getAll("country");
+  const hasSavedCountrySelection = query.has("countriesSelected") || requestedCountries.length > 0;
+  refreshCountryOptions(hasSavedCountrySelection ? new Set(requestedCountries) : undefined);
 
   const update = (): void => {
     let fromYear = Number(from.value);
@@ -1147,6 +1201,47 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
   exportButton.addEventListener("click", () => {
     exportVisibleCSV(visibleCountries, visibleFromYear, visibleToYear, visibleIndicator);
     recordActivity("activityExported", { count: visibleCountries.length });
+  });
+  element<HTMLButtonElement>("save-view").addEventListener("click", () => {
+    const savedQuery = new URLSearchParams();
+    savedQuery.set("lang", language);
+    savedQuery.set("indicator", indicatorSelect.value);
+    savedQuery.set("region", regionSelect.value);
+    savedQuery.set("income", incomeSelect.value);
+    savedQuery.set("from", from.value);
+    savedQuery.set("to", to.value);
+    savedQuery.set("countriesSelected", "1");
+    for (const option of Array.from(select.selectedOptions)) savedQuery.append("country", option.value);
+    try {
+      window.localStorage.setItem("gdp-dashboard:saved-view:v1", savedQuery.toString());
+      preferencesStatus.textContent = message("savedView");
+    } catch {
+      preferencesStatus.textContent = message("preferencesError");
+    }
+  });
+  element<HTMLButtonElement>("restore-view").addEventListener("click", () => {
+    try {
+      const savedQuery = window.localStorage.getItem("gdp-dashboard:saved-view:v1");
+      if (!savedQuery) {
+        preferencesStatus.textContent = message("noSavedView");
+        return;
+      }
+      if (savedQuery.length > 8192) {
+        preferencesStatus.textContent = message("preferencesError");
+        return;
+      }
+      window.location.search = savedQuery;
+    } catch {
+      preferencesStatus.textContent = message("preferencesError");
+    }
+  });
+  element<HTMLButtonElement>("clear-view").addEventListener("click", () => {
+    try {
+      window.localStorage.removeItem("gdp-dashboard:saved-view:v1");
+      preferencesStatus.textContent = message("clearedView");
+    } catch {
+      preferencesStatus.textContent = message("preferencesError");
+    }
   });
   update();
   element<HTMLDivElement>("dashboard").hidden = false;

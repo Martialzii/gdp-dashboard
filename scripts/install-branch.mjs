@@ -133,6 +133,7 @@ async function main() {
       } catch (error) {
         if (error.code !== "ENOENT") throw error;
       }
+      await mkdir(path.dirname(destination), { recursive: true });
       run("git", [
         "clone", "--depth", "1", "--single-branch", "--no-tags",
         "--branch", options.branch, repository, destination,

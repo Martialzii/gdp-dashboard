@@ -84,6 +84,7 @@ Both non-Python dashboards provide:
 - GDP summaries and annual growth
 - Multi-year year-over-year growth trends and start-to-end cumulative change
 - Data service freshness and a private, live in-session activity feed
+- Device-local saved dashboard views for repeat consumers
 - GDP rankings for the selected end year
 - CSV export of the visible country/year selection
 - Explicit unavailable states for missing World Bank observations

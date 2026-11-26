@@ -73,6 +73,16 @@
             <p id="activity-privacy" class="hint"></p>
             <ol id="activity-feed" class="activity-feed" aria-live="polite" aria-relevant="additions"></ol>
           </section>
+          <section class="panel" aria-labelledby="preferences-heading">
+            <h2 id="preferences-heading">Personalize your view</h2>
+            <p id="preferences-privacy" class="hint"></p>
+            <div class="actions">
+              <button id="save-view" class="export-button" type="button">Save this view on this device</button>
+              <button id="restore-view" class="export-button" type="button">Restore saved view</button>
+              <button id="clear-view" class="export-button" type="button">Clear saved view</button>
+            </div>
+            <p id="preferences-status" class="hint" role="status" aria-live="polite"></p>
+          </section>
         </div>
         <div class="panel controls">
           <label for="language"><span id="language-label">Language</span>
@@ -106,6 +116,7 @@
           </div>
           <div>
             <label id="countries-label" for="countries">Countries</label>
+            <input type="hidden" name="countriesSelected" value="1">
             <select id="countries" multiple aria-describedby="country-hint"></select>
             <p class="hint" id="country-hint">Filters narrow the country list, map, and group averages. Use Ctrl (Windows/Linux) or ⌘ (Mac) to select multiple countries.</p>
           </div>

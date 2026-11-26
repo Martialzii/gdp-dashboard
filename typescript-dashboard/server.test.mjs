@@ -56,6 +56,9 @@ test("serves cached dashboard assets and streams the dataset", async (t) => {
   assert.match(pageText, /id="cumulative-growth"/);
   assert.match(pageText, /id="activity-feed"/);
   assert.match(pageText, /id="service-updated"/);
+  assert.match(pageText, /id="save-view"/);
+  assert.match(pageText, /id="restore-view"/);
+  assert.match(pageText, /id="clear-view"/);
   assert.match(pageText, /Data services/);
   assert.match(pageText, /Live activity/);
   const pageTag = page.headers.get("etag");
@@ -73,6 +76,9 @@ test("serves cached dashboard assets and streams the dataset", async (t) => {
   assert.match(scriptText, /renderCumulativeGrowth/);
   assert.match(scriptText, /activityExported/);
   assert.match(scriptText, /renderServiceStatus/);
+  assert.match(scriptText, /gdp-dashboard:saved-view:v1/);
+  assert.match(scriptText, /countriesSelected/);
+  assert.match(scriptText, /clearView/);
   assert.match(scriptText, /no usage telemetry is sent/);
   assert.match(scriptText, /missingSnapshots/);
   assert.match(scriptText, /languageSelect/);

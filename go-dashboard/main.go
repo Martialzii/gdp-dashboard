@@ -20,7 +20,7 @@ import (
 	"sync"
 )
 
-var appVersion = "1.3.0"
+var appVersion = "1.4.0"
 
 type Country struct {
 	Code         string
@@ -184,73 +184,82 @@ type pageData struct {
 }
 
 type uiText struct {
-	AppTitle          string
-	Intro             string
-	SourceName        string
-	Language          string
-	Indicator         string
-	GDP               string
-	GDPPerCapita      string
-	RealGDP           string
-	Region            string
-	AllRegions        string
-	IncomeGroup       string
-	AllIncomeGroups   string
-	Years             string
-	From              string
-	To                string
-	Countries         string
-	CountryHint       string
-	Update            string
-	NoDataSelection   string
-	ChartAlt          string
-	ChartHeading      string
-	MetricsHeading    string
-	RankingsHeading   string
-	GrowthHeading     string
-	AnnualGrowthHint  string
-	GrowthUnavailable string
-	GrowthTrend       string
-	GrowthTrendHint   string
-	CumulativeGrowth  string
-	CumulativeHint    string
-	Services          string
-	ServiceReady      string
-	ServiceSource     string
-	ServiceUpdated    string
-	ActivityHeading   string
-	ActivityPrivacy   string
-	ActivityLoaded    string
-	ActivityIndicator string
-	ActivityRange     string
-	ActivityFilters   string
-	ActivityCountries string
-	ActivityExported  string
-	Rank              string
-	Country           string
-	CountryName       string
-	CountryCode       string
-	Year              string
-	Value             string
-	Growth            string
-	NoValuesForYear   string
-	SelectCountry     string
-	Unavailable       string
-	ExportCSV         string
-	MapHeading        string
-	MapAlt            string
-	MapTooltip        string
-	MapScaleHint      string
-	Lower             string
-	Middle            string
-	Higher            string
-	NoData            string
-	Comparisons       string
-	ComparisonHint    string
-	Group             string
-	Average           string
-	CountriesCount    string
-	MissingMapData    string
+	AppTitle           string
+	Intro              string
+	SourceName         string
+	Language           string
+	Indicator          string
+	GDP                string
+	GDPPerCapita       string
+	RealGDP            string
+	Region             string
+	AllRegions         string
+	IncomeGroup        string
+	AllIncomeGroups    string
+	Years              string
+	From               string
+	To                 string
+	Countries          string
+	CountryHint        string
+	Update             string
+	NoDataSelection    string
+	ChartAlt           string
+	ChartHeading       string
+	MetricsHeading     string
+	RankingsHeading    string
+	GrowthHeading      string
+	AnnualGrowthHint   string
+	GrowthUnavailable  string
+	GrowthTrend        string
+	GrowthTrendHint    string
+	CumulativeGrowth   string
+	CumulativeHint     string
+	Services           string
+	ServiceReady       string
+	ServiceSource      string
+	ServiceUpdated     string
+	ActivityHeading    string
+	ActivityPrivacy    string
+	ActivityLoaded     string
+	ActivityIndicator  string
+	ActivityRange      string
+	ActivityFilters    string
+	ActivityCountries  string
+	ActivityExported   string
+	PreferencesHeading string
+	SaveView           string
+	RestoreView        string
+	ClearView          string
+	ViewSaved          string
+	ViewCleared        string
+	NoSavedView        string
+	PreferencesError   string
+	PreferencesPrivacy string
+	Rank               string
+	Country            string
+	CountryName        string
+	CountryCode        string
+	Year               string
+	Value              string
+	Growth             string
+	NoValuesForYear    string
+	SelectCountry      string
+	Unavailable        string
+	ExportCSV          string
+	MapHeading         string
+	MapAlt             string
+	MapTooltip         string
+	MapScaleHint       string
+	Lower              string
+	Middle             string
+	Higher             string
+	NoData             string
+	Comparisons        string
+	ComparisonHint     string
+	Group              string
+	Average            string
+	CountriesCount     string
+	MissingMapData     string
 }
 
 func translationsFor(language string) uiText {
@@ -278,15 +287,24 @@ func translationsFor(language string) uiText {
 			CumulativeHint:   "Cambio porcentual desde el año inicial hasta el año final, usando el valor del año inicial como denominador.",
 			Services:         "Servicios de datos", ServiceReady: "El servicio de datos del panel está disponible.",
 			ServiceSource: "Fuente", ServiceUpdated: "Última actualización de la instantánea",
-			ActivityHeading:   "Actividad en directo",
-			ActivityPrivacy:   "Las acciones recientes solo se guardan en esta página; no se envían datos de uso.",
-			ActivityLoaded:    "Panel listo: {indicator}, {from}–{to}, {count} países.",
-			ActivityIndicator: "Indicador cambiado a {indicator}.",
-			ActivityRange:     "Intervalo de años cambiado a {from}–{to}.",
-			ActivityFilters:   "Filtro de región o ingresos cambiado.",
-			ActivityCountries: "Selección de países cambiada ({count} países).",
-			ActivityExported:  "CSV exportado para {count} países.",
-			GrowthUnavailable: "Crecimiento no disponible", Rank: "Posición", Country: "País",
+			ActivityHeading:    "Actividad en directo",
+			ActivityPrivacy:    "Las acciones recientes solo se guardan en esta página; no se envían datos de uso.",
+			ActivityLoaded:     "Panel listo: {indicator}, {from}–{to}, {count} países.",
+			ActivityIndicator:  "Indicador cambiado a {indicator}.",
+			ActivityRange:      "Intervalo de años cambiado a {from}–{to}.",
+			ActivityFilters:    "Filtro de región o ingresos cambiado.",
+			ActivityCountries:  "Selección de países cambiada ({count} países).",
+			ActivityExported:   "CSV exportado para {count} países.",
+			PreferencesHeading: "Personaliza tu vista",
+			SaveView:           "Guardar esta vista en este dispositivo",
+			RestoreView:        "Restaurar vista guardada",
+			ClearView:          "Borrar vista guardada",
+			ViewSaved:          "Vista del panel guardada en este dispositivo.",
+			ViewCleared:        "Vista guardada borrada de este dispositivo.",
+			NoSavedView:        "No hay una vista guardada en este dispositivo.",
+			PreferencesError:   "No se puede acceder a las vistas guardadas en este navegador.",
+			PreferencesPrivacy: "La vista se guarda en este navegador e incluye solo idioma, indicador, filtros, países y años.",
+			GrowthUnavailable:  "Crecimiento no disponible", Rank: "Posición", Country: "País",
 			CountryName: "Nombre del país", CountryCode: "Código del país", Year: "Año", Value: "Valor",
 			Growth: "Crecimiento", NoValuesForYear: "No hay valores disponibles para este año.",
 			SelectCountry: "Selecciona al menos un país.", Unavailable: "No disponible",
@@ -323,15 +341,24 @@ func translationsFor(language string) uiText {
 			CumulativeHint:   "Variation en pourcentage entre les années de début et de fin, avec la valeur de l'année de début comme dénominateur.",
 			Services:         "Services de données", ServiceReady: "Le service de données du tableau de bord est disponible.",
 			ServiceSource: "Source", ServiceUpdated: "Dernière actualisation de l’instantané",
-			ActivityHeading:   "Activité en direct",
-			ActivityPrivacy:   "Les actions récentes restent sur cette page ; aucune télémétrie d’utilisation n’est envoyée.",
-			ActivityLoaded:    "Tableau prêt : {indicator}, {from}–{to}, {count} pays.",
-			ActivityIndicator: "Indicateur changé : {indicator}.",
-			ActivityRange:     "Période changée : {from}–{to}.",
-			ActivityFilters:   "Filtre de région ou de revenu modifié.",
-			ActivityCountries: "Sélection des pays modifiée ({count} pays).",
-			ActivityExported:  "CSV exporté pour {count} pays.",
-			GrowthUnavailable: "Croissance indisponible", Rank: "Rang", Country: "Pays",
+			ActivityHeading:    "Activité en direct",
+			ActivityPrivacy:    "Les actions récentes restent sur cette page ; aucune télémétrie d’utilisation n’est envoyée.",
+			ActivityLoaded:     "Tableau prêt : {indicator}, {from}–{to}, {count} pays.",
+			ActivityIndicator:  "Indicateur changé : {indicator}.",
+			ActivityRange:      "Période changée : {from}–{to}.",
+			ActivityFilters:    "Filtre de région ou de revenu modifié.",
+			ActivityCountries:  "Sélection des pays modifiée ({count} pays).",
+			ActivityExported:   "CSV exporté pour {count} pays.",
+			PreferencesHeading: "Personnaliser votre vue",
+			SaveView:           "Enregistrer cette vue sur cet appareil",
+			RestoreView:        "Restaurer la vue enregistrée",
+			ClearView:          "Supprimer la vue enregistrée",
+			ViewSaved:          "Vue du tableau de bord enregistrée sur cet appareil.",
+			ViewCleared:        "Vue enregistrée supprimée de cet appareil.",
+			NoSavedView:        "Aucune vue enregistrée n’est disponible sur cet appareil.",
+			PreferencesError:   "Impossible d’accéder aux vues enregistrées dans ce navigateur.",
+			PreferencesPrivacy: "La vue reste dans ce navigateur et contient uniquement la langue, l’indicateur, les filtres, les pays et les années.",
+			GrowthUnavailable:  "Croissance indisponible", Rank: "Rang", Country: "Pays",
 			CountryName: "Nom du pays", CountryCode: "Code du pays", Year: "Année", Value: "Valeur",
 			Growth: "Croissance", NoValuesForYear: "Aucune valeur disponible pour cette année.",
 			SelectCountry: "Sélectionnez au moins un pays.", Unavailable: "Indisponible",
@@ -368,15 +395,24 @@ func translationsFor(language string) uiText {
 			CumulativeHint:   "Percent change from the selected start year to the end year, using the start-year value as the denominator.",
 			Services:         "Data services", ServiceReady: "Dashboard data service is available.",
 			ServiceSource: "Source", ServiceUpdated: "Snapshot last refreshed",
-			ActivityHeading:   "Live activity",
-			ActivityPrivacy:   "Recent actions are kept on this page only; no usage telemetry is sent.",
-			ActivityLoaded:    "Dashboard ready: {indicator}, {from}–{to}, {count} countries.",
-			ActivityIndicator: "Indicator changed to {indicator}.",
-			ActivityRange:     "Year range changed to {from}–{to}.",
-			ActivityFilters:   "Region or income-group filter changed.",
-			ActivityCountries: "Country selection changed ({count} countries).",
-			ActivityExported:  "CSV exported for {count} countries.",
-			GrowthUnavailable: "Growth unavailable", Rank: "Rank", Country: "Country",
+			ActivityHeading:    "Live activity",
+			ActivityPrivacy:    "Recent actions are kept on this page only; no usage telemetry is sent.",
+			ActivityLoaded:     "Dashboard ready: {indicator}, {from}–{to}, {count} countries.",
+			ActivityIndicator:  "Indicator changed to {indicator}.",
+			ActivityRange:      "Year range changed to {from}–{to}.",
+			ActivityFilters:    "Region or income-group filter changed.",
+			ActivityCountries:  "Country selection changed ({count} countries).",
+			ActivityExported:   "CSV exported for {count} countries.",
+			PreferencesHeading: "Personalize your view",
+			SaveView:           "Save this view on this device",
+			RestoreView:        "Restore saved view",
+			ClearView:          "Clear saved view",
+			ViewSaved:          "Dashboard view saved on this device.",
+			ViewCleared:        "Saved dashboard view cleared from this device.",
+			NoSavedView:        "No saved view is available on this device.",
+			PreferencesError:   "Unable to access saved views in this browser.",
+			PreferencesPrivacy: "Saved view stays in this browser and includes only language, indicator, filters, countries, and years.",
+			GrowthUnavailable:  "Growth unavailable", Rank: "Rank", Country: "Country",
 			CountryName: "Country Name", CountryCode: "Country Code", Year: "Year", Value: "Value",
 			Growth: "Growth", NoValuesForYear: "No values are available for this year.",
 			SelectCountry: "Select at least one country.", Unavailable: "Unavailable",
@@ -518,6 +554,7 @@ const pageTemplate = `<!doctype html>
       <label class="year-field" for="to">{{.Text.To}}<input id="to" name="to" type="number" min="{{.MinYear}}" max="{{.MaxYear}}" value="{{.To}}"></label>
     </div></div>
     <div><label for="countries">{{.Text.Countries}}</label>
+      <input type="hidden" name="countriesSelected" value="1">
       <select id="countries" name="country" multiple aria-describedby="country-hint">
         {{range .Countries}}<option value="{{.Code}}" {{if .Selected}}selected{{end}}>{{.Code}} — {{.Name}}</option>{{end}}
       </select>
@@ -539,6 +576,16 @@ const pageTemplate = `<!doctype html>
         data-countries="{{.Text.ActivityCountries}}" data-exported="{{.Text.ActivityExported}}"
         data-indicator-label="{{.IndicatorLabel}}" data-from="{{.From}}" data-to="{{.To}}"
         data-count="{{.SelectedCountryCount}}"></ol>
+    </section>
+    <section class="panel" aria-labelledby="preferences-heading">
+      <h2 id="preferences-heading">{{.Text.PreferencesHeading}}</h2>
+      <p class="hint">{{.Text.PreferencesPrivacy}}</p>
+      <div class="actions">
+        <button id="save-view" data-saved="{{.Text.ViewSaved}}" data-error="{{.Text.PreferencesError}}" type="button">{{.Text.SaveView}}</button>
+        <button id="restore-view" data-empty="{{.Text.NoSavedView}}" type="button">{{.Text.RestoreView}}</button>
+        <button id="clear-view" data-cleared="{{.Text.ViewCleared}}" data-error="{{.Text.PreferencesError}}" type="button">{{.Text.ClearView}}</button>
+      </div>
+      <p id="preferences-status" class="hint" role="status" aria-live="polite"></p>
     </section>
   </div>
   <h2>{{.ChartHeading}}</h2><section class="panel chart-wrap">
@@ -580,6 +627,8 @@ const pageTemplate = `<!doctype html>
   </tbody></table></section>
   <script>
     const feed = document.getElementById("activity-feed");
+    const preferenceStatus = document.getElementById("preferences-status");
+    const preferenceKey = "gdp-dashboard:saved-view:v1";
     const entries = [];
     function addActivity(template, values = {}) {
       const text = Object.entries(values).reduce((result, [key, value]) =>
@@ -613,6 +662,39 @@ const pageTemplate = `<!doctype html>
     }
     document.querySelector("a.export-button").addEventListener("click", () =>
       addActivity(feed.dataset.exported, { count: selectedCount() }));
+    document.getElementById("save-view").addEventListener("click", () => {
+      try {
+        const savedQuery = new URLSearchParams(new FormData(document.querySelector("form")));
+        localStorage.setItem(preferenceKey, savedQuery.toString());
+        preferenceStatus.textContent = document.getElementById("save-view").dataset.saved;
+      } catch {
+        preferenceStatus.textContent = document.getElementById("save-view").dataset.error;
+      }
+    });
+    document.getElementById("restore-view").addEventListener("click", () => {
+      try {
+        const savedQuery = localStorage.getItem(preferenceKey);
+        if (!savedQuery) {
+          preferenceStatus.textContent = document.getElementById("restore-view").dataset.empty;
+          return;
+        }
+        if (savedQuery.length > 8192) {
+          preferenceStatus.textContent = document.getElementById("save-view").dataset.error;
+          return;
+        }
+        location.search = savedQuery;
+      } catch {
+        preferenceStatus.textContent = document.getElementById("save-view").dataset.error;
+      }
+    });
+    document.getElementById("clear-view").addEventListener("click", () => {
+      try {
+        localStorage.removeItem(preferenceKey);
+        preferenceStatus.textContent = document.getElementById("clear-view").dataset.cleared;
+      } catch {
+        preferenceStatus.textContent = document.getElementById("clear-view").dataset.error;
+      }
+    });
   </script>
 </main></body></html>`
 
