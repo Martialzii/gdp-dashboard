@@ -20,7 +20,7 @@ import (
 	"sync"
 )
 
-var appVersion = "1.4.0"
+var appVersion = "1.5.0"
 
 type Country struct {
 	Code         string
@@ -134,6 +134,14 @@ type cumulativeGrowthRow struct {
 	Change string
 }
 
+type coverageRow struct {
+	Code     string
+	Name     string
+	Observed string
+	Rate     string
+	Missing  string
+}
+
 type gridLine struct {
 	Y     float64
 	Label string
@@ -160,6 +168,7 @@ type pageData struct {
 	GrowthYears          []int
 	GrowthTrendRows      []growthTrendRow
 	CumulativeGrowthRows []cumulativeGrowthRow
+	CoverageRows         []coverageRow
 	DataSource           string
 	DataUpdatedAt        string
 	SelectedCountryCount int
@@ -173,6 +182,7 @@ type pageData struct {
 	RankingsHeading      string
 	GrowthHeading        string
 	CumulativeHeading    string
+	CoverageHeading      string
 	MapHeading           string
 	MapAlt               string
 	Region               string
@@ -214,6 +224,12 @@ type uiText struct {
 	GrowthTrendHint    string
 	CumulativeGrowth   string
 	CumulativeHint     string
+	CoverageHeading    string
+	CoverageHint       string
+	CoverageObserved   string
+	CoverageRate       string
+	CoverageMissing    string
+	NoMissingYears     string
 	Services           string
 	ServiceReady       string
 	ServiceSource      string
@@ -285,7 +301,11 @@ func translationsFor(language string) uiText {
 			GrowthTrendHint:  "Cada columna muestra la variación porcentual anual respecto al año calendario anterior.",
 			CumulativeGrowth: "Variación acumulada ({from}–{to})",
 			CumulativeHint:   "Cambio porcentual desde el año inicial hasta el año final, usando el valor del año inicial como denominador.",
-			Services:         "Servicios de datos", ServiceReady: "El servicio de datos del panel está disponible.",
+			CoverageHeading:  "Auditoría de cobertura ({from}–{to})",
+			CoverageHint:     "Muestra las observaciones disponibles del indicador seleccionado. La cobertura indica disponibilidad, no calidad de los datos.",
+			CoverageObserved: "Años observados / totales", CoverageRate: "Cobertura",
+			CoverageMissing: "Años sin datos", NoMissingYears: "Ninguno",
+			Services: "Servicios de datos", ServiceReady: "El servicio de datos del panel está disponible.",
 			ServiceSource: "Fuente", ServiceUpdated: "Última actualización de la instantánea",
 			ActivityHeading:    "Actividad en directo",
 			ActivityPrivacy:    "Las acciones recientes solo se guardan en esta página; no se envían datos de uso.",
@@ -339,7 +359,11 @@ func translationsFor(language string) uiText {
 			GrowthTrendHint:  "Chaque colonne indique la variation annuelle en pourcentage par rapport à l'année civile précédente.",
 			CumulativeGrowth: "Variation cumulée ({from}–{to})",
 			CumulativeHint:   "Variation en pourcentage entre les années de début et de fin, avec la valeur de l'année de début comme dénominateur.",
-			Services:         "Services de données", ServiceReady: "Le service de données du tableau de bord est disponible.",
+			CoverageHeading:  "Audit de couverture ({from}–{to})",
+			CoverageHint:     "Affiche les observations disponibles pour l’indicateur choisi. La couverture décrit la disponibilité, pas la qualité des données.",
+			CoverageObserved: "Années observées / total", CoverageRate: "Couverture",
+			CoverageMissing: "Années manquantes", NoMissingYears: "Aucune",
+			Services: "Services de données", ServiceReady: "Le service de données du tableau de bord est disponible.",
 			ServiceSource: "Source", ServiceUpdated: "Dernière actualisation de l’instantané",
 			ActivityHeading:    "Activité en direct",
 			ActivityPrivacy:    "Les actions récentes restent sur cette page ; aucune télémétrie d’utilisation n’est envoyée.",
@@ -393,7 +417,11 @@ func translationsFor(language string) uiText {
 			GrowthTrendHint:  "Each column shows annual percent change for that year, calculated against the previous calendar year.",
 			CumulativeGrowth: "Cumulative change ({from}–{to})",
 			CumulativeHint:   "Percent change from the selected start year to the end year, using the start-year value as the denominator.",
-			Services:         "Data services", ServiceReady: "Dashboard data service is available.",
+			CoverageHeading:  "Data coverage audit ({from}–{to})",
+			CoverageHint:     "Shows reported observations for the selected indicator. Coverage describes availability, not data quality.",
+			CoverageObserved: "Observed / total years", CoverageRate: "Coverage",
+			CoverageMissing: "Missing years", NoMissingYears: "None",
+			Services: "Data services", ServiceReady: "Dashboard data service is available.",
 			ServiceSource: "Source", ServiceUpdated: "Snapshot last refreshed",
 			ActivityHeading:    "Live activity",
 			ActivityPrivacy:    "Recent actions are kept on this page only; no usage telemetry is sent.",
@@ -617,6 +645,10 @@ const pageTemplate = `<!doctype html>
   <h2>{{.CumulativeHeading}}</h2><p class="hint">{{.Text.CumulativeHint}}</p>
   <div class="panel"><table><thead><tr><th>{{.Text.Country}}</th><th class="numeric">{{.Text.Growth}}</th></tr></thead><tbody>
     {{range .CumulativeGrowthRows}}<tr><td>{{.Code}} — {{.Name}}</td><td class="numeric {{if eq .Change $.Text.Unavailable}}missing{{end}}">{{.Change}}</td></tr>{{else}}<tr><td class="missing">{{.Text.SelectCountry}}</td></tr>{{end}}
+  </tbody></table></div>
+  <h2>{{.CoverageHeading}}</h2><p class="hint">{{.Text.CoverageHint}}</p>
+  <div class="panel"><table><thead><tr><th>{{.Text.Country}}</th><th class="numeric">{{.Text.CoverageObserved}}</th><th class="numeric">{{.Text.CoverageRate}}</th><th>{{.Text.CoverageMissing}}</th></tr></thead><tbody>
+    {{range .CoverageRows}}<tr><td>{{.Code}} — {{.Name}}</td><td class="numeric">{{.Observed}}</td><td class="numeric">{{.Rate}}</td><td>{{.Missing}}</td></tr>{{else}}<tr><td colspan="4" class="missing">{{.Text.SelectCountry}}</td></tr>{{end}}
   </tbody></table></div>
   <h2>{{.MapHeading}}</h2><section class="panel chart-wrap"><svg viewBox="0 0 1000 500" role="img" aria-label="{{.MapAlt}}">
     {{range .MapCountries}}<path d="{{.Path}}" fill="{{.Fill}}" stroke="#fff" stroke-width="0.7"><title>{{.Title}}</title></path>{{else}}<text x="500" y="250" text-anchor="middle" fill="#758198">{{.Text.MissingMapData}}</text>{{end}}
@@ -1170,6 +1202,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		RankingsHeading:      localizedMessage(text.RankingsHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
 		GrowthHeading:        localizedMessage(text.GrowthHeading, "indicator", indicatorLabel, "year", strconv.Itoa(to)),
 		CumulativeHeading:    localizedMessage(text.CumulativeGrowth, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
+		CoverageHeading:      localizedMessage(text.CoverageHeading, "from", strconv.Itoa(from), "to", strconv.Itoa(to)),
 		DataSource:           dataset.SnapshotSource,
 		DataUpdatedAt:        dataset.SnapshotUpdatedAt,
 		SelectedCountryCount: len(selected),
@@ -1184,6 +1217,7 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		GrowthYears:          make([]int, 0, to-from+1),
 		GrowthTrendRows:      make([]growthTrendRow, 0, len(selected)),
 		CumulativeGrowthRows: make([]cumulativeGrowthRow, 0, len(selected)),
+		CoverageRows:         make([]coverageRow, 0, len(selected)),
 	}
 	for year := from; year <= to; year++ {
 		page.GrowthYears = append(page.GrowthYears, year)
@@ -1328,6 +1362,27 @@ func buildPage(dataset *Dataset, request *http.Request) pageData {
 		}
 		page.CumulativeGrowthRows = append(page.CumulativeGrowthRows, cumulativeGrowthRow{
 			Code: code, Name: country.Name, Change: change,
+		})
+		observedYears := 0
+		missingYears := make([]string, 0, to-from+1)
+		for year := from; year <= to; year++ {
+			if _, available := valueAt(dataset, country, year, indicator); available {
+				observedYears++
+			} else {
+				missingYears = append(missingYears, strconv.Itoa(year))
+			}
+		}
+		missing := text.NoMissingYears
+		if len(missingYears) > 0 {
+			missing = strings.Join(missingYears, ", ")
+		}
+		totalYears := to - from + 1
+		page.CoverageRows = append(page.CoverageRows, coverageRow{
+			Code:     code,
+			Name:     country.Name,
+			Observed: fmt.Sprintf("%d/%d", observedYears, totalYears),
+			Rate:     fmt.Sprintf("%.1f%%", float64(observedYears)/float64(totalYears)*100),
+			Missing:  missing,
 		})
 	}
 	groupTotals := make(map[string]struct {

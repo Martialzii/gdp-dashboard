@@ -52,6 +52,12 @@ const translations = {
     growthTrendHint: "Each column shows annual percent change for that year, calculated against the previous calendar year.",
     cumulativeGrowth: "Cumulative change ({from}–{to})",
     cumulativeGrowthHint: "Percent change from the selected start year to the end year, using the start-year value as the denominator.",
+    coverageHeading: "Data coverage audit ({from}–{to})",
+    coverageHint: "Shows reported observations for the selected indicator. Coverage describes availability, not data quality.",
+    coverageObserved: "Observed / total years",
+    coverageRate: "Coverage",
+    coverageMissing: "Missing years",
+    noMissingYears: "None",
     services: "Data services",
     serviceReady: "Dashboard data service is available.",
     serviceSource: "Source",
@@ -131,6 +137,12 @@ const translations = {
     growthTrendHint: "Cada columna muestra la variación porcentual anual respecto al año calendario anterior.",
     cumulativeGrowth: "Variación acumulada ({from}–{to})",
     cumulativeGrowthHint: "Cambio porcentual desde el año inicial hasta el año final, usando el valor del año inicial como denominador.",
+    coverageHeading: "Auditoría de cobertura ({from}–{to})",
+    coverageHint: "Muestra las observaciones disponibles del indicador seleccionado. La cobertura indica disponibilidad, no calidad de los datos.",
+    coverageObserved: "Años observados / totales",
+    coverageRate: "Cobertura",
+    coverageMissing: "Años sin datos",
+    noMissingYears: "Ninguno",
     services: "Servicios de datos",
     serviceReady: "El servicio de datos del panel está disponible.",
     serviceSource: "Fuente",
@@ -210,6 +222,12 @@ const translations = {
     growthTrendHint: "Chaque colonne indique la variation annuelle en pourcentage par rapport à l'année civile précédente.",
     cumulativeGrowth: "Variation cumulée ({from}–{to})",
     cumulativeGrowthHint: "Variation en pourcentage entre les années de début et de fin, avec la valeur de l'année de début comme dénominateur.",
+    coverageHeading: "Audit de couverture ({from}–{to})",
+    coverageHint: "Affiche les observations disponibles pour l’indicateur choisi. La couverture décrit la disponibilité, pas la qualité des données.",
+    coverageObserved: "Années observées / total",
+    coverageRate: "Couverture",
+    coverageMissing: "Années manquantes",
+    noMissingYears: "Aucune",
     services: "Services de données",
     serviceReady: "Le service de données du tableau de bord est disponible.",
     serviceSource: "Source",
@@ -475,6 +493,11 @@ function applyStaticTranslations(): void {
   element<HTMLParagraphElement>("growth-trend-hint").textContent = message("growthTrendHint");
   element<HTMLHeadingElement>("cumulative-growth-heading").textContent = message("cumulativeGrowth");
   element<HTMLParagraphElement>("cumulative-growth-hint").textContent = message("cumulativeGrowthHint");
+  element<HTMLTableCellElement>("coverage-country-heading").textContent = message("country");
+  element<HTMLTableCellElement>("coverage-observed-heading").textContent = message("coverageObserved");
+  element<HTMLTableCellElement>("coverage-rate-heading").textContent = message("coverageRate");
+  element<HTMLTableCellElement>("coverage-missing-heading").textContent = message("coverageMissing");
+  element<HTMLParagraphElement>("coverage-hint").textContent = message("coverageHint");
   element<HTMLHeadingElement>("services-heading").textContent = message("services");
   element<HTMLParagraphElement>("service-ready").textContent = message("serviceReady");
   element<HTMLSpanElement>("service-source-label").textContent = message("serviceSource");
@@ -899,6 +922,48 @@ function exportVisibleCSV(countries: Country[], fromYear: number, toYear: number
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function renderCoverageAudit(countries: Country[], fromYear: number, toYear: number, indicator: Indicator): void {
+  element<HTMLHeadingElement>("coverage-heading").textContent = message("coverageHeading", {
+    from: fromYear, to: toYear,
+  });
+  const body = element<HTMLTableSectionElement>("coverage-body");
+  body.replaceChildren();
+  const totalYears = toYear - fromYear + 1;
+  if (countries.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 4;
+    cell.className = "missing";
+    cell.textContent = message("selectCountry");
+    row.append(cell);
+    body.append(row);
+    return;
+  }
+  for (const country of countries) {
+    let observedYears = 0;
+    const missingYears: number[] = [];
+    for (let year = fromYear; year <= toYear; year++) {
+      if (valueFor(country, year, indicator) === undefined) missingYears.push(year);
+      else observedYears += 1;
+    }
+    const row = document.createElement("tr");
+    const countryCell = document.createElement("td");
+    countryCell.textContent = `${country.code} — ${country.name}`;
+    const observedCell = document.createElement("td");
+    observedCell.className = "numeric";
+    observedCell.textContent = `${observedYears}/${totalYears}`;
+    const rateCell = document.createElement("td");
+    rateCell.className = "numeric";
+    rateCell.textContent = `${((observedYears / totalYears) * 100).toFixed(1)}%`;
+    const missingCell = document.createElement("td");
+    missingCell.textContent = missingYears.length > 0
+      ? missingYears.join(", ")
+      : message("noMissingYears");
+    row.append(countryCell, observedCell, rateCell, missingCell);
+    body.append(row);
+  }
+}
+
 function renderMap(countries: Country[], map: MapData, year: number, indicator: Indicator): void {
   element<HTMLHeadingElement>("map-heading").textContent = message("worldMap", {
     indicator: indicatorName(indicator), year,
@@ -1150,6 +1215,7 @@ function initialize(countries: Country[], years: number[], mapData: MapData): vo
     renderAnnualGrowth(chosen, toYear, indicator);
     renderGrowthTrend(chosen, fromYear, toYear, indicator);
     renderCumulativeGrowth(chosen, fromYear, toYear, indicator);
+    renderCoverageAudit(chosen, fromYear, toYear, indicator);
     renderMap(filteredCountries, mapData, toYear, indicator);
     renderComparisons(filteredCountries, toYear, indicator);
     renderServiceStatus();

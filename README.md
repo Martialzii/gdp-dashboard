@@ -83,6 +83,7 @@ Both non-Python dashboards provide:
 - GDP-over-time chart
 - GDP summaries and annual growth
 - Multi-year year-over-year growth trends and start-to-end cumulative change
+- Data coverage audit by country, with observed-year counts and missing-year details
 - Data service freshness and a private, live in-session activity feed
 - Device-local saved dashboard views for repeat consumers
 - GDP rankings for the selected end year

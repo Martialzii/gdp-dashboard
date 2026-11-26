@@ -23,6 +23,7 @@ Start either dashboard using the commands in the repository README, then open it
 5. Set the **From** and **To** years. The chart and export use that range; map, rankings, and group comparisons use the selected end year.
 6. Select **Export visible data as CSV** to download the selected indicator for the selected countries and years.
 7. Optionally select **Save this view on this device** to store the current language, indicator, filters, selected countries, and year range in browser storage. Select **Restore saved view** on a later visit to reapply it, or **Clear saved view** to remove it. The saved view remains on that browser/device; it is not sent to the data provider and is not included in activity telemetry.
+8. Review the **Data coverage audit** to see how many observations are available for each selected country and indicator over the chosen years, the coverage percentage, and any missing years.
 
 ### Read the results
 
@@ -30,6 +31,7 @@ Start either dashboard using the commands in the repository README, then open it
 - Annual growth is year-over-year percent change: (current-year value − previous-year value) ÷ previous-year value × 100. Growth is unavailable when the previous year's value is missing or zero.
 - The growth trend table shows that calculation for each year in the selected range. Its first year uses the calendar year immediately before the range as the denominator, so it may be unavailable even when the first selected year has data.
 - Cumulative change is a separate start-to-end percent change: (end-year value − start-year value) ÷ start-year value × 100. It is unavailable if either endpoint is missing or the start-year value is zero.
+- The data coverage audit counts reported observations, including legitimate zero values. Its percentage describes availability only; it is not a measure of source quality or statistical reliability.
 - The data-services panel shows the source and last refresh time of the World Bank indicator snapshot. The live activity feed tracks dashboard selections and CSV exports on the current page only; it is not a real-time World Bank event stream, does not persist after leaving the page, and sends no usage telemetry.
 - Saved views are optional and browser-local. They are separate from the page-local activity feed and can be restored only in the same browser profile and dashboard origin.
 - Map colors show relative quintile buckets among countries matching the active filters; gray means no reported value or a country outside the filters.
@@ -57,6 +59,7 @@ Inicia uno de los paneles con los comandos del README del repositorio y abre su 
 5. Define los años **Desde** y **Hasta**. El gráfico y la exportación usan ese intervalo; el mapa, la clasificación y las comparaciones usan el año final seleccionado.
 6. Selecciona **Exportar datos visibles como CSV** para descargar el indicador, los países y los años elegidos.
 7. Si quieres, selecciona **Guardar esta vista en este dispositivo** para guardar en el navegador el idioma, el indicador, los filtros, los países y el intervalo de años. Usa **Restaurar vista guardada** en otra visita para volver a aplicarla o **Borrar vista guardada** para eliminarla. La vista se conserva solo en ese navegador/dispositivo; no se envía al proveedor de datos ni se incluye en la actividad.
+8. Consulta la **Auditoría de cobertura** para ver cuántas observaciones hay por país e indicador en los años elegidos, el porcentaje de cobertura y los años sin datos.
 
 ### Interpretación
 
@@ -64,6 +67,7 @@ Inicia uno de los paneles con los comandos del README del repositorio y abre su 
 - El crecimiento anual es la variación porcentual interanual: (valor del año actual − valor del año anterior) ÷ valor del año anterior × 100. No está disponible si falta el valor del año anterior o es cero.
 - La tabla de tendencia muestra ese cálculo para cada año del intervalo seleccionado. El primer año usa como denominador el año calendario anterior al intervalo, por lo que puede no estar disponible aunque haya datos para el primer año seleccionado.
 - La variación acumulada es un cálculo distinto entre el inicio y el final: (valor del año final − valor del año inicial) ÷ valor del año inicial × 100. No está disponible si falta alguno de los extremos o si el valor inicial es cero.
+- La auditoría de cobertura cuenta las observaciones disponibles, incluidos los valores legítimos de cero. El porcentaje solo describe disponibilidad, no calidad de la fuente ni fiabilidad estadística.
 - El panel de servicios de datos muestra la fuente y la última actualización de la instantánea de indicadores del Banco Mundial. El registro de actividad en directo muestra selecciones y exportaciones CSV solo en la página actual; no es una transmisión de eventos del Banco Mundial, no persiste al salir de la página y no envía datos de uso.
 - Las vistas guardadas son opcionales y locales al navegador. Son independientes del registro de actividad y solo se pueden restaurar en el mismo perfil del navegador y origen del panel.
 - Los colores del mapa representan quintiles relativos entre los países que coinciden con los filtros; el gris indica que no hay datos o que el país queda fuera de los filtros.
@@ -91,6 +95,7 @@ Démarrez l’un des tableaux de bord avec les commandes indiquées dans le READ
 5. Définissez les années **De** et **À**. Le graphique et l’export utilisent cette période ; la carte, le classement et les comparaisons utilisent l’année de fin sélectionnée.
 6. Cliquez sur **Exporter les données visibles au format CSV** pour télécharger l’indicateur, les pays et les années sélectionnés.
 7. Vous pouvez choisir **Enregistrer cette vue sur cet appareil** pour stocker dans le navigateur la langue, l’indicateur, les filtres, les pays et la période. Choisissez **Restaurer la vue enregistrée** lors d’une prochaine visite pour la réappliquer, ou **Supprimer la vue enregistrée** pour l’effacer. La vue reste dans ce navigateur/appareil ; elle n’est pas envoyée au fournisseur de données ni incluse dans l’activité.
+8. Consultez l’**Audit de couverture** pour connaître le nombre d’observations disponibles par pays et indicateur sur la période choisie, le pourcentage de couverture et les années manquantes.
 
 ### Interprétation
 
@@ -98,6 +103,7 @@ Démarrez l’un des tableaux de bord avec les commandes indiquées dans le READ
 - La croissance annuelle est la variation en pourcentage d'une année à l'autre : (valeur de l'année en cours − valeur de l'année précédente) ÷ valeur de l'année précédente × 100. Elle est indisponible si la valeur de l'année précédente est absente ou nulle.
 - Le tableau de tendance présente ce calcul pour chaque année de la période sélectionnée. La première année utilise l'année civile précédente comme dénominateur ; le résultat peut donc être indisponible même si la première année sélectionnée contient une observation.
 - La variation cumulée est un calcul distinct entre le début et la fin : (valeur de l'année finale − valeur de l'année initiale) ÷ valeur de l'année initiale × 100. Elle est indisponible si l'une des deux observations manque ou si la valeur initiale est nulle.
+- L’audit de couverture compte les observations disponibles, y compris les valeurs nulles légitimes. Le pourcentage indique uniquement la disponibilité, pas la qualité de la source ni la fiabilité statistique.
 - Le panneau des services de données indique la source et la date d’actualisation du dernier instantané d’indicateurs de la Banque mondiale. Le fil d’activité en direct suit les sélections et les exports CSV sur la page actuelle uniquement ; il ne s’agit pas d’un flux d’événements en temps réel de la Banque mondiale, il n’est pas conservé après avoir quitté la page et aucune télémétrie d’utilisation n’est envoyée.
 - Les vues enregistrées sont facultatives et restent dans le navigateur. Elles sont distinctes du fil d’activité et ne peuvent être restaurées que dans le même profil de navigateur et à la même adresse du tableau de bord.
 - Les couleurs de la carte représentent des quintiles relatifs parmi les pays correspondant aux filtres actifs ; le gris indique une donnée absente ou un pays exclu par les filtres.

@@ -59,6 +59,8 @@ test("serves cached dashboard assets and streams the dataset", async (t) => {
   assert.match(pageText, /id="save-view"/);
   assert.match(pageText, /id="restore-view"/);
   assert.match(pageText, /id="clear-view"/);
+  assert.match(pageText, /id="coverage-body"/);
+  assert.match(pageText, /Data coverage audit/);
   assert.match(pageText, /Data services/);
   assert.match(pageText, /Live activity/);
   const pageTag = page.headers.get("etag");
@@ -74,6 +76,7 @@ test("serves cached dashboard assets and streams the dataset", async (t) => {
   assert.match(scriptText, /renderRankings/);
   assert.match(scriptText, /renderGrowthTrend/);
   assert.match(scriptText, /renderCumulativeGrowth/);
+  assert.match(scriptText, /renderCoverageAudit/);
   assert.match(scriptText, /activityExported/);
   assert.match(scriptText, /renderServiceStatus/);
   assert.match(scriptText, /gdp-dashboard:saved-view:v1/);

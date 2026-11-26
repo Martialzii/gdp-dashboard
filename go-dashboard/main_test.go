@@ -61,6 +61,7 @@ Example,EXM,100,200
 		`<html lang="es">`, "Panel del PIB", "Idioma", "Actualizar panel",
 		"el valor del año anterior es el denominador", "Tendencia del crecimiento interanual",
 		"Variación acumulada (1960–1961)", "100.00%",
+		"Auditoría de cobertura (1960–1961)", "Años observados / totales",
 		"Servicios de datos", "Actividad en directo", "no se envían datos de uso",
 		"Personaliza tu vista", "Guardar esta vista en este dispositivo",
 		"Borrar vista guardada",
@@ -69,6 +70,32 @@ Example,EXM,100,200
 		if !strings.Contains(rendered.String(), expected) {
 			t.Errorf("rendered Spanish page is missing %q", expected)
 		}
+	}
+}
+
+func TestCoverageAuditCountsZeroAndListsMissingYears(t *testing.T) {
+	dataset, err := loadDataset(strings.NewReader(`Country Name,Country Code,1960,1961,1962
+Complete Economy,CMP,0,200,300
+Partial Economy,PAR,100,,300
+Missing Economy,MIS,,,
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest("GET", "/?from=1960&to=1962&country=CMP&country=PAR&country=MIS", nil)
+	page := buildPage(dataset, request)
+	coverageByCode := make(map[string]coverageRow)
+	for _, row := range page.CoverageRows {
+		coverageByCode[row.Code] = row
+	}
+	if got := coverageByCode["CMP"]; got.Observed != "3/3" || got.Rate != "100.0%" || got.Missing != "None" {
+		t.Errorf("complete coverage should include zero-valued observations: %+v", got)
+	}
+	if got := coverageByCode["PAR"]; got.Observed != "2/3" || got.Rate != "66.7%" || got.Missing != "1961" {
+		t.Errorf("partial coverage should identify the missing year: %+v", got)
+	}
+	if got := coverageByCode["MIS"]; got.Observed != "0/3" || got.Rate != "0.0%" || got.Missing != "1960, 1961, 1962" {
+		t.Errorf("missing observations should report zero coverage: %+v", got)
 	}
 }
 
